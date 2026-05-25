@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────────────────────────
+// Enums
+// ─────────────────────────────────────────────
+
+enum UserRole {
+  SUPER_ADMIN
+  CEO
+  CMO
+  CFO
+  CTO
+}
+
+enum ClientStatus {
+  ACTIVE
+  INACTIVE
+  TRIAL
+  CHURNED
+}
+
+enum BillingCycle {
+  MONTHLY
+  QUARTERLY
+  ANNUALLY
+}
+
+enum ExpenseCategory {
+  SAAS
+  PAYROLL
+  MARKETING
+  OPERATIONS
+  INFRASTRUCTURE
+  TRAVEL
+  OTHER
+}
+
+enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+// ─────────────────────────────────────────────
+// User
+// ─────────────────────────────────────────────
+
+model User {
+  id        String   @id @default(cuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      UserRole @default(CEO)
+  avatar    String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expensesCreated  Expense[] @relation("ExpenseCreatedBy")
+  expensesApproved Expense[] @relation("ExpenseApprovedBy")
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────
+// Client
+// ─────────────────────────────────────────────
+
+model Client {
+  id        String       @id @default(cuid())
+  name      String
+  email     String       @unique
+  phone     String?
+  company   String
+  industry  String?
+  website   String?
+  address   String?
+  city      String?
+  country   String?
+  status    ClientStatus @default(TRIAL)
+  notes     String?
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+
+  contacts     Contact[]
+  subscription Subscription?
+
+  @@map("clients")
+}
+
+model Contact {
+  id        String   @id @default(cuid())
+  clientId  String
+  name      String
+  email     String?
+  phone     String?
+  role      String?
+  isPrimary Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("contacts")
+}
+
+model Subscription {
+  id           String       @id @default(cuid())
+  clientId     String       @unique
+  planName     String
+  price        Decimal      @db.Decimal(10, 2)
+  currency     String       @default("USD")
+  billingCycle BillingCycle @default(MONTHLY)
+  startDate    DateTime
+  endDate      DateTime?
+  renewalDate  DateTime?
+  isAutoRenew  Boolean      @default(true)
+  features     String[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+
+  client Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+
+  @@map("subscriptions")
+}
+
+// ─────────────────────────────────────────────
+// Expense
+// ─────────────────────────────────────────────
+
+model Expense {
+  id            String          @id @default(cuid())
+  title         String
+  description   String?
+  amount        Decimal         @db.Decimal(10, 2)
+  currency      String          @default("USD")
+  category      ExpenseCategory
+  expenseDate   DateTime
+  receiptUrl    String?
+  status        ExpenseStatus   @default(PENDING)
+  rejectionNote String?
+  createdById   String
+  approvedById  String?
+  approvedAt    DateTime?
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  createdBy  User  @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
+  approvedBy User? @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+
+  @@map("expenses")
+}
