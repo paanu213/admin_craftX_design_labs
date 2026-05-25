@@ -8,7 +8,6 @@ import {
   Receipt,
   BarChart3,
   Settings,
-  CreditCard,
   ChevronLeft,
   Building2,
 } from "lucide-react";
