@@ -30,6 +30,13 @@ export interface ClientWithRelations {
   address: string | null;
   city: string | null;
   country: string | null;
+  businessType: string | null;
+  pincode: string | null;
+  state: string | null;
+  locality: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  appRequirements: string[];
   status: ClientStatus;
   notes: string | null;
   createdAt: Date;

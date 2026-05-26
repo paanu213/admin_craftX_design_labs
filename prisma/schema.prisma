@@ -74,20 +74,27 @@ model User {
 // ─────────────────────────────────────────────
 
 model Client {
-  id        String       @id @default(cuid())
-  name      String
-  email     String       @unique
-  phone     String?
-  company   String
-  industry  String?
-  website   String?
-  address   String?
-  city      String?
-  country   String?
-  status    ClientStatus @default(TRIAL)
-  notes     String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  phone           String?
+  company         String
+  industry        String?
+  website         String?
+  businessType    String?
+  address         String?
+  city            String?
+  country         String?
+  pincode         String?
+  state           String?
+  locality        String?
+  addressLine1    String?
+  addressLine2    String?
+  appRequirements String[]     @default([])
+  status          ClientStatus @default(TRIAL)
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
   contacts     Contact[]
   subscription Subscription?
@@ -116,7 +123,7 @@ model Subscription {
   clientId     String       @unique
   planName     String
   price        Decimal      @db.Decimal(10, 2)
-  currency     String       @default("USD")
+  currency     String       @default("INR")
   billingCycle BillingCycle @default(MONTHLY)
   startDate    DateTime
   endDate      DateTime?
@@ -140,7 +147,7 @@ model Expense {
   title         String
   description   String?
   amount        Decimal         @db.Decimal(10, 2)
-  currency      String          @default("USD")
+  currency      String          @default("INR")
   category      ExpenseCategory
   expenseDate   DateTime
   receiptUrl    String?

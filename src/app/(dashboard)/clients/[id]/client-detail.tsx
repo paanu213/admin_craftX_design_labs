@@ -15,12 +15,23 @@ import {
   CreditCard,
   Users,
   Calendar,
+  Monitor,
+  Smartphone,
+  LayoutGrid,
+  Building2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { RoleGuard } from "@/components/guards/RoleGuard";
 import { ClientForm } from "@/components/forms/ClientForm";
 import { SubscriptionForm } from "@/components/forms/SubscriptionForm";
@@ -42,11 +53,24 @@ const STATUS_VARIANT_MAP: Record<
   CHURNED: "destructive",
 };
 
+const APP_ICONS: Record<string, React.ReactNode> = {
+  WEB: <LayoutGrid className="h-3.5 w-3.5" />,
+  MOBILE: <Smartphone className="h-3.5 w-3.5" />,
+  DESKTOP: <Monitor className="h-3.5 w-3.5" />,
+};
+
+const APP_LABELS: Record<string, string> = {
+  WEB: "Web App",
+  MOBILE: "Mobile App",
+  DESKTOP: "Desktop App",
+};
+
 export function ClientDetail({ clientId }: { clientId: string }) {
   const router = useRouter();
   const queryClient = useQueryClient();
   const [editing, setEditing] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState(false);
+  const [updatingStatus, setUpdatingStatus] = useState(false);
 
   const { data: client, isLoading } = useQuery<ClientWithRelations>({
     queryKey: ["client", clientId],
@@ -62,6 +86,24 @@ export function ClientDetail({ clientId }: { clientId: string }) {
       router.push("/clients");
     } else {
       toast.error("Failed to delete client");
+    }
+  }
+
+  async function handleStatusChange(newStatus: ClientStatus) {
+    if (!client) return;
+    setUpdatingStatus(true);
+    const res = await fetch(`/api/clients/${clientId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...client, status: newStatus }),
+    });
+    setUpdatingStatus(false);
+    if (res.ok) {
+      toast.success(`Status updated to ${CLIENT_STATUS_LABELS[newStatus]}`);
+      queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+    } else {
+      toast.error("Failed to update status");
     }
   }
 
@@ -116,10 +158,21 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     );
   }
 
+  const fullAddress = [
+    client.addressLine1,
+    client.addressLine2,
+    client.locality,
+    client.city,
+    client.state,
+    client.pincode,
+  ]
+    .filter(Boolean)
+    .join(", ");
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-start justify-between gap-4 flex-wrap">
         <div className="flex items-center gap-3">
           <Button variant="outline" size="icon" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
@@ -129,10 +182,32 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             <p className="text-sm text-muted-foreground">{client.company}</p>
           </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={STATUS_VARIANT_MAP[client.status]}>
             {CLIENT_STATUS_LABELS[client.status]}
           </Badge>
+
+          {/* Quick status change */}
+          <RoleGuard permission="editClients">
+            <div className="flex items-center gap-1">
+              <Select
+                defaultValue={client.status}
+                onValueChange={(v) => handleStatusChange(v as ClientStatus)}
+                disabled={updatingStatus}
+              >
+                <SelectTrigger className="h-8 text-xs w-36">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="TRIAL">Trial</SelectItem>
+                  <SelectItem value="ACTIVE">Active</SelectItem>
+                  <SelectItem value="INACTIVE">Inactive</SelectItem>
+                  <SelectItem value="CHURNED">Churned</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </RoleGuard>
+
           <RoleGuard permission="editClients">
             <Button
               variant="outline"
@@ -158,12 +233,12 @@ export function ClientDetail({ clientId }: { clientId: string }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Contact Info */}
+        {/* Contact & Business Info */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Mail className="h-4 w-4" />
-              Contact Information
+              <Building2 className="h-4 w-4" />
+              Business Information
             </CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
@@ -195,14 +270,10 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                 </a>
               </div>
             )}
-            {(client.city || client.country) && (
-              <div className="flex items-center gap-2 text-sm">
-                <MapPin className="h-4 w-4 text-muted-foreground shrink-0" />
-                <span>
-                  {[client.address, client.city, client.country]
-                    .filter(Boolean)
-                    .join(", ")}
-                </span>
+            {fullAddress && (
+              <div className="flex items-start gap-2 text-sm">
+                <MapPin className="h-4 w-4 text-muted-foreground shrink-0 mt-0.5" />
+                <span>{fullAddress}</span>
               </div>
             )}
             <Separator />
@@ -211,6 +282,12 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                 <p>
                   <span className="text-muted-foreground">Industry: </span>
                   {client.industry}
+                </p>
+              )}
+              {client.businessType && (
+                <p>
+                  <span className="text-muted-foreground">Business Type: </span>
+                  {client.businessType}
                 </p>
               )}
               <p>
@@ -306,6 +383,28 @@ export function ClientDetail({ clientId }: { clientId: string }) {
         </Card>
       </div>
 
+      {/* Application Requirements */}
+      {client.appRequirements && client.appRequirements.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Monitor className="h-4 w-4" />
+              Application Requirements
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {client.appRequirements.map((req) => (
+                <Badge key={req} variant="secondary" className="flex items-center gap-1.5 px-3 py-1">
+                  {APP_ICONS[req]}
+                  {APP_LABELS[req] ?? req}
+                </Badge>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Contacts */}
       {client.contacts.length > 0 && (
         <Card>
@@ -318,7 +417,10 @@ export function ClientDetail({ clientId }: { clientId: string }) {
           <CardContent>
             <div className="divide-y divide-border">
               {client.contacts.map((contact) => (
-                <div key={contact.id} className="py-3 flex items-center justify-between">
+                <div
+                  key={contact.id}
+                  className="py-3 flex items-center justify-between"
+                >
                   <div>
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{contact.name}</p>
@@ -329,7 +431,9 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                       )}
                     </div>
                     {contact.role && (
-                      <p className="text-xs text-muted-foreground">{contact.role}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {contact.role}
+                      </p>
                     )}
                   </div>
                   <div className="text-right text-xs text-muted-foreground space-y-0.5">
