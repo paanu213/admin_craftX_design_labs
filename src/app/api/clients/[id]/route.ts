@@ -22,6 +22,11 @@ export async function GET(
       include: {
         contacts: true,
         subscription: true,
+        activationKey: {
+          include: {
+            generatedBy: { select: { id: true, name: true, role: true } },
+          },
+        },
       },
     });
 

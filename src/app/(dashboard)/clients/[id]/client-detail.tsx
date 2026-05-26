@@ -19,6 +19,12 @@ import {
   Smartphone,
   LayoutGrid,
   Building2,
+  KeyRound,
+  Copy,
+  CheckCheck,
+  RefreshCw,
+  ShieldOff,
+  Loader2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -53,6 +59,18 @@ const STATUS_VARIANT_MAP: Record<
   CHURNED: "destructive",
 };
 
+const KEY_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive"> = {
+  ACTIVE: "success",
+  PENDING: "warning",
+  REVOKED: "destructive",
+};
+
+const KEY_STATUS_LABEL: Record<string, string> = {
+  ACTIVE: "Activated",
+  PENDING: "Awaiting Activation",
+  REVOKED: "Revoked",
+};
+
 const APP_ICONS: Record<string, React.ReactNode> = {
   WEB: <LayoutGrid className="h-3.5 w-3.5" />,
   MOBILE: <Smartphone className="h-3.5 w-3.5" />,
@@ -71,6 +89,8 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const [editing, setEditing] = useState(false);
   const [editingSubscription, setEditingSubscription] = useState(false);
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [keyLoading, setKeyLoading] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const { data: client, isLoading } = useQuery<ClientWithRelations>({
     queryKey: ["client", clientId],
@@ -78,8 +98,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   });
 
   async function handleDelete() {
-    if (!confirm(`Delete client "${client?.name}"? This cannot be undone.`))
-      return;
+    if (!confirm(`Delete client "${client?.name}"? This cannot be undone.`)) return;
     const res = await fetch(`/api/clients/${clientId}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Client deleted");
@@ -105,6 +124,53 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     } else {
       toast.error("Failed to update status");
     }
+  }
+
+  async function handleGenerateKey() {
+    if (!client?.subscription) {
+      toast.error("Add a subscription plan before generating a key");
+      return;
+    }
+    if (
+      client.activationKey?.status === "ACTIVE" &&
+      !confirm("This client already has an active key. Generate a new one? The old key will stop working.")
+    ) {
+      return;
+    }
+    setKeyLoading(true);
+    const res = await fetch("/api/keys", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clientId }),
+    });
+    setKeyLoading(false);
+    if (res.ok) {
+      toast.success("Activation key generated");
+      queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? "Failed to generate key");
+    }
+  }
+
+  async function handleRevokeKey() {
+    if (!confirm("Revoke this key? The client's application will stop working until a new key is generated.")) return;
+    setKeyLoading(true);
+    const res = await fetch(`/api/keys/${clientId}`, { method: "DELETE" });
+    setKeyLoading(false);
+    if (res.ok) {
+      toast.success("Key revoked");
+      queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+    } else {
+      toast.error("Failed to revoke key");
+    }
+  }
+
+  async function copyKey(key: string) {
+    await navigator.clipboard.writeText(key);
+    setCopied(true);
+    toast.success("Key copied to clipboard");
+    setTimeout(() => setCopied(false), 2000);
   }
 
   if (isLoading) {
@@ -169,6 +235,8 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     .filter(Boolean)
     .join(", ");
 
+  const ak = client.activationKey;
+
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
@@ -187,33 +255,26 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             {CLIENT_STATUS_LABELS[client.status]}
           </Badge>
 
-          {/* Quick status change */}
           <RoleGuard permission="editClients">
-            <div className="flex items-center gap-1">
-              <Select
-                defaultValue={client.status}
-                onValueChange={(v) => handleStatusChange(v as ClientStatus)}
-                disabled={updatingStatus}
-              >
-                <SelectTrigger className="h-8 text-xs w-36">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="TRIAL">Trial</SelectItem>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="CHURNED">Churned</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+            <Select
+              defaultValue={client.status}
+              onValueChange={(v) => handleStatusChange(v as ClientStatus)}
+              disabled={updatingStatus}
+            >
+              <SelectTrigger className="h-8 text-xs w-36">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="TRIAL">Trial</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="INACTIVE">Inactive</SelectItem>
+                <SelectItem value="CHURNED">Churned</SelectItem>
+              </SelectContent>
+            </Select>
           </RoleGuard>
 
           <RoleGuard permission="editClients">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setEditing(true)}
-            >
+            <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
               <Edit className="h-4 w-4" />
               Edit
             </Button>
@@ -233,7 +294,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Contact & Business Info */}
+        {/* Business Information */}
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
@@ -244,10 +305,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
           <CardContent className="space-y-3">
             <div className="flex items-center gap-2 text-sm">
               <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
-              <a
-                href={`mailto:${client.email}`}
-                className="text-primary hover:underline"
-              >
+              <a href={`mailto:${client.email}`} className="text-primary hover:underline">
                 {client.email}
               </a>
             </div>
@@ -377,15 +435,9 @@ export function ClientDetail({ clientId }: { clientId: string }) {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-8 gap-3">
-                <p className="text-sm text-muted-foreground">
-                  No subscription set up
-                </p>
+                <p className="text-sm text-muted-foreground">No subscription set up</p>
                 <RoleGuard permission="editClients">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setEditingSubscription(true)}
-                  >
+                  <Button variant="outline" size="sm" onClick={() => setEditingSubscription(true)}>
                     Add Subscription
                   </Button>
                 </RoleGuard>
@@ -394,6 +446,133 @@ export function ClientDetail({ clientId }: { clientId: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Activation Key */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <KeyRound className="h-4 w-4" />
+              Activation Key
+            </CardTitle>
+            <RoleGuard permission="generateKey">
+              <div className="flex items-center gap-2">
+                {ak && ak.status !== "REVOKED" && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    onClick={handleRevokeKey}
+                    disabled={keyLoading}
+                  >
+                    {keyLoading ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <ShieldOff className="h-3.5 w-3.5" />
+                    )}
+                    Revoke
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGenerateKey}
+                  disabled={keyLoading}
+                >
+                  {keyLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <RefreshCw className="h-3.5 w-3.5" />
+                  )}
+                  {ak ? "Regenerate" : "Generate Key"}
+                </Button>
+              </div>
+            </RoleGuard>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {ak ? (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between gap-3 flex-wrap">
+                <Badge variant={KEY_STATUS_VARIANT[ak.status]}>
+                  {KEY_STATUS_LABEL[ak.status]}
+                </Badge>
+                <p className="text-xs text-muted-foreground">
+                  Generated by {ak.generatedBy.name} · {formatDate(ak.generatedAt)}
+                </p>
+              </div>
+
+              {ak.status !== "REVOKED" && (
+                <div className="flex items-center gap-2 bg-muted rounded-lg px-4 py-3">
+                  <code className="flex-1 font-mono text-sm tracking-widest select-all">
+                    {ak.key}
+                  </code>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 shrink-0"
+                    onClick={() => copyKey(ak.key)}
+                  >
+                    {copied ? (
+                      <CheckCheck className="h-4 w-4 text-green-500" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+              )}
+
+              {ak.status === "ACTIVE" && ak.activatedAt && (
+                <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+                  <Calendar className="h-3.5 w-3.5" />
+                  Activated on {formatDate(ak.activatedAt)}
+                </p>
+              )}
+
+              {ak.status === "PENDING" && (
+                <p className="text-xs text-muted-foreground">
+                  Share this key with the client. The subscription starts when they enter it in the installed application.
+                </p>
+              )}
+
+              {ak.status === "REVOKED" && (
+                <p className="text-xs text-destructive">
+                  This key is revoked. Generate a new key to reactivate the client&apos;s application.
+                </p>
+              )}
+            </div>
+          ) : (
+            <div className="flex flex-col items-center justify-center py-8 gap-3 text-center">
+              <KeyRound className="h-8 w-8 text-muted-foreground/40" />
+              <div>
+                <p className="text-sm font-medium">No activation key yet</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {client.subscription
+                    ? "CEO or Super Admin can generate a key to activate the client's application."
+                    : "Add a subscription plan first, then generate an activation key."}
+                </p>
+              </div>
+              <RoleGuard permission="generateKey">
+                {client.subscription && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleGenerateKey}
+                    disabled={keyLoading}
+                  >
+                    {keyLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      <KeyRound className="h-4 w-4" />
+                    )}
+                    Generate Activation Key
+                  </Button>
+                )}
+              </RoleGuard>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Application Requirements */}
       {client.appRequirements && client.appRequirements.length > 0 && (
@@ -407,7 +586,11 @@ export function ClientDetail({ clientId }: { clientId: string }) {
           <CardContent>
             <div className="flex flex-wrap gap-2">
               {client.appRequirements.map((req) => (
-                <Badge key={req} variant="secondary" className="flex items-center gap-1.5 px-3 py-1">
+                <Badge
+                  key={req}
+                  variant="secondary"
+                  className="flex items-center gap-1.5 px-3 py-1"
+                >
                   {APP_ICONS[req]}
                   {APP_LABELS[req] ?? req}
                 </Badge>
@@ -437,15 +620,11 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-medium">{contact.name}</p>
                       {contact.isPrimary && (
-                        <Badge variant="secondary" className="text-xs">
-                          Primary
-                        </Badge>
+                        <Badge variant="secondary" className="text-xs">Primary</Badge>
                       )}
                     </div>
                     {contact.role && (
-                      <p className="text-xs text-muted-foreground">
-                        {contact.role}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{contact.role}</p>
                     )}
                   </div>
                   <div className="text-right text-xs text-muted-foreground space-y-0.5">
