@@ -1,19 +1,13 @@
-import { getToken } from "next-auth/jwt";
+import { auth } from "@/lib/auth";
 import { NextResponse } from "next/server";
-import type { NextRequest } from "next/server";
+import type { NextAuthRequest } from "next-auth";
 
-const publicRoutes = ["/login"];
 const adminOnlyRoutes = ["/settings"];
 
-export async function proxy(req: NextRequest) {
-  const token = await getToken({
-    req,
-    secret: process.env.AUTH_SECRET,
-  });
-
+export const proxy = auth((req: NextAuthRequest) => {
   const { nextUrl } = req;
-  const isLoggedIn = !!token;
-  const isPublic = publicRoutes.includes(nextUrl.pathname);
+  const isLoggedIn = !!req.auth;
+  const isPublic = nextUrl.pathname === "/login";
 
   if (!isLoggedIn && !isPublic) {
     return NextResponse.redirect(new URL("/login", nextUrl));
@@ -26,12 +20,10 @@ export async function proxy(req: NextRequest) {
   const isAdminOnly = adminOnlyRoutes.some((r) =>
     nextUrl.pathname.startsWith(r)
   );
-  if (isAdminOnly && (token?.role as string) !== "SUPER_ADMIN") {
+  if (isAdminOnly && (req.auth?.user?.role as string) !== "SUPER_ADMIN") {
     return NextResponse.redirect(new URL("/", nextUrl));
   }
-
-  return NextResponse.next();
-}
+});
 
 export const config = {
   matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
