@@ -17,19 +17,24 @@ export async function GET(
 
     const { id } = await params;
 
-    const client = await db.client.findUnique({
-      where: { id },
-      include: {
-        contacts: true,
-        subscription: true,
-      },
-    });
+    const client = await db.client.findUnique({ where: { id } });
 
     if (!client) {
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
+    let contacts: unknown[] = [];
+    let subscription = null;
     let activationKey = null;
+
+    try {
+      contacts = await db.contact.findMany({ where: { clientId: id } });
+    } catch {}
+
+    try {
+      subscription = await db.subscription.findUnique({ where: { clientId: id } });
+    } catch {}
+
     try {
       activationKey = await db.activationKey.findUnique({
         where: { clientId: id },
@@ -37,11 +42,9 @@ export async function GET(
           generatedBy: { select: { id: true, name: true, role: true } },
         },
       });
-    } catch {
-      // activationKey query is non-critical; return client data regardless
-    }
+    } catch {}
 
-    return NextResponse.json({ ...client, activationKey });
+    return NextResponse.json({ ...client, contacts, subscription, activationKey });
   } catch (error) {
     console.error("[GET /api/clients/[id]]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
