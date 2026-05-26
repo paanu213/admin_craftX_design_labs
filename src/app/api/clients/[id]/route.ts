@@ -22,11 +22,6 @@ export async function GET(
       include: {
         contacts: true,
         subscription: true,
-        activationKey: {
-          include: {
-            generatedBy: { select: { id: true, name: true, role: true } },
-          },
-        },
       },
     });
 
@@ -34,7 +29,19 @@ export async function GET(
       return NextResponse.json({ error: "Client not found" }, { status: 404 });
     }
 
-    return NextResponse.json(client);
+    let activationKey = null;
+    try {
+      activationKey = await db.activationKey.findUnique({
+        where: { clientId: id },
+        include: {
+          generatedBy: { select: { id: true, name: true, role: true } },
+        },
+      });
+    } catch {
+      // activationKey query is non-critical; return client data regardless
+    }
+
+    return NextResponse.json({ ...client, activationKey });
   } catch (error) {
     console.error("[GET /api/clients/[id]]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
