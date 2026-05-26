@@ -426,7 +426,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                       {formatDate(client.subscription.renewalDate)}
                     </div>
                   )}
-                  {client.subscription.features.length > 0 && (
+                  {Array.isArray(client.subscription.features) && client.subscription.features.length > 0 && (
                     <div className="flex flex-wrap gap-1 pt-1">
                       {client.subscription.features.map((f) => (
                         <Badge key={f} variant="secondary" className="text-xs">
@@ -579,7 +579,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
       </Card>
 
       {/* Application Requirements */}
-      {client.appRequirements && client.appRequirements.length > 0 && (
+      {Array.isArray(client.appRequirements) && client.appRequirements.length > 0 && (
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">

@@ -74,6 +74,7 @@ export async function POST(
     return NextResponse.json({
       ...subscription,
       price: Number(subscription.price),
+      features: Array.isArray(subscription.features) ? subscription.features : [],
     });
   } catch (error) {
     console.error("[POST /api/clients/[id]/subscription]", error);

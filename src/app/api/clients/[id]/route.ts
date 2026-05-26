@@ -44,7 +44,24 @@ export async function GET(
       });
     } catch {}
 
-    return NextResponse.json({ ...client, contacts, subscription, activationKey });
+    return NextResponse.json({
+      ...client,
+      // pg adapter may return text[] as raw "{val}" strings — normalise to JS arrays
+      appRequirements: Array.isArray(client.appRequirements)
+        ? client.appRequirements
+        : [],
+      contacts,
+      subscription: subscription
+        ? {
+            ...subscription,
+            price: Number(subscription.price),
+            features: Array.isArray((subscription as { features: unknown }).features)
+              ? (subscription as { features: string[] }).features
+              : [],
+          }
+        : null,
+      activationKey,
+    });
   } catch (error) {
     console.error("[GET /api/clients/[id]]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

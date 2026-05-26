@@ -41,7 +41,19 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      data: clients,
+      data: clients.map((c) => ({
+        ...c,
+        appRequirements: Array.isArray(c.appRequirements) ? c.appRequirements : [],
+        subscription: c.subscription
+          ? {
+              ...c.subscription,
+              price: Number(c.subscription.price),
+              features: Array.isArray(c.subscription.features)
+                ? c.subscription.features
+                : [],
+            }
+          : null,
+      })),
       meta: {
         page,
         limit,
