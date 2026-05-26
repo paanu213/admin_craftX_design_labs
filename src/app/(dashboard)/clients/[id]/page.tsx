@@ -2,16 +2,17 @@ import { Header } from "@/components/layout/Header";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { ClientDetail } from "./client-detail";
 
-export default function ClientDetailPage({
+export default async function ClientDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   return (
     <>
       <Header title="Client Details" />
       <PageWrapper>
-        <ClientDetail clientId={params.id} />
+        <ClientDetail clientId={id} />
       </PageWrapper>
     </>
   );
