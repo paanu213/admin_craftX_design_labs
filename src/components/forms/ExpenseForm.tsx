@@ -56,7 +56,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
           receiptUrl: expense.receiptUrl ?? "",
         }
       : {
-          currency: "USD",
+          currency: "INR",
           expenseDate: format(new Date(), "yyyy-MM-dd"),
         },
   });
@@ -141,17 +141,17 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             <div className="space-y-2">
               <Label>Currency</Label>
               <Select
-                defaultValue={expense?.currency ?? "USD"}
+                defaultValue={expense?.currency ?? "INR"}
                 onValueChange={(v) => setValue("currency", v)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="GBP">GBP</SelectItem>
-                  <SelectItem value="INR">INR</SelectItem>
+                  <SelectItem value="INR">INR (₹)</SelectItem>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

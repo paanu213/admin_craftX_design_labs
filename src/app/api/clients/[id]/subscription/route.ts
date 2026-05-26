@@ -50,7 +50,7 @@ export async function POST(
         clientId,
         planName,
         price,
-        currency: currency ?? "USD",
+        currency: currency ?? "INR",
         billingCycle: billingCycle ?? "MONTHLY",
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
@@ -61,7 +61,7 @@ export async function POST(
       update: {
         planName,
         price,
-        currency: currency ?? "USD",
+        currency: currency ?? "INR",
         billingCycle: billingCycle ?? "MONTHLY",
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,

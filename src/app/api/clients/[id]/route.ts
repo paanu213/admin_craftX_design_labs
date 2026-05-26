@@ -22,6 +22,11 @@ export async function GET(
       include: {
         contacts: true,
         subscription: true,
+        activationKey: {
+          include: {
+            generatedBy: { select: { id: true, name: true, role: true } },
+          },
+        },
       },
     });
 
@@ -67,9 +72,16 @@ export async function PUT(
         company: body.company,
         industry: body.industry ?? null,
         website: body.website ?? null,
-        address: body.address ?? null,
+        businessType: body.businessType ?? null,
+        gstNumber: body.gstNumber ?? null,
+        panNumber: body.panNumber ?? null,
+        pincode: body.pincode ?? null,
+        state: body.state ?? null,
         city: body.city ?? null,
-        country: body.country ?? null,
+        locality: body.locality ?? null,
+        addressLine1: body.addressLine1 ?? null,
+        addressLine2: body.addressLine2 ?? null,
+        appRequirements: body.appRequirements ?? [],
         status: body.status,
         notes: body.notes ?? null,
       },

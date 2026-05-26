@@ -63,7 +63,7 @@ export function SubscriptionForm({
           features: subscription.features,
         }
       : {
-          currency: "USD",
+          currency: "INR",
           billingCycle: "MONTHLY",
           isAutoRenew: true,
           features: [],
@@ -128,17 +128,17 @@ export function SubscriptionForm({
             <div className="space-y-2">
               <Label htmlFor="currency">Currency</Label>
               <Select
-                defaultValue="USD"
+                defaultValue="INR"
                 onValueChange={(v) => setValue("currency", v)}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USD">USD</SelectItem>
-                  <SelectItem value="EUR">EUR</SelectItem>
-                  <SelectItem value="GBP">GBP</SelectItem>
-                  <SelectItem value="INR">INR</SelectItem>
+                  <SelectItem value="INR">INR (₹)</SelectItem>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

@@ -4,9 +4,21 @@ import type {
   BillingCycle,
   ExpenseCategory,
   ExpenseStatus,
+  KeyStatus,
 } from "@/generated/prisma/enums";
 
-export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus };
+export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, KeyStatus };
+
+export interface ActivationKey {
+  id: string;
+  clientId: string;
+  key: string;
+  status: KeyStatus;
+  generatedById: string;
+  generatedAt: Date;
+  activatedAt: Date | null;
+  generatedBy: { id: string; name: string; role: string };
+}
 
 export interface SafeUser {
   id: string;
@@ -30,12 +42,22 @@ export interface ClientWithRelations {
   address: string | null;
   city: string | null;
   country: string | null;
+  businessType: string | null;
+  gstNumber: string | null;
+  panNumber: string | null;
+  pincode: string | null;
+  state: string | null;
+  locality: string | null;
+  addressLine1: string | null;
+  addressLine2: string | null;
+  appRequirements: string[];
   status: ClientStatus;
   notes: string | null;
   createdAt: Date;
   updatedAt: Date;
   contacts: Contact[];
   subscription: Subscription | null;
+  activationKey: ActivationKey | null;
 }
 
 export interface Contact {

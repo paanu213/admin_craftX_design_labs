@@ -48,6 +48,12 @@ enum ExpenseStatus {
   REJECTED
 }
 
+enum KeyStatus {
+  PENDING
+  ACTIVE
+  REVOKED
+}
+
 // ─────────────────────────────────────────────
 // User
 // ─────────────────────────────────────────────
@@ -63,8 +69,9 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  expensesCreated  Expense[] @relation("ExpenseCreatedBy")
-  expensesApproved Expense[] @relation("ExpenseApprovedBy")
+  expensesCreated  Expense[]       @relation("ExpenseCreatedBy")
+  expensesApproved Expense[]       @relation("ExpenseApprovedBy")
+  keysGenerated    ActivationKey[] @relation("KeyGeneratedBy")
 
   @@map("users")
 }
@@ -74,23 +81,33 @@ model User {
 // ─────────────────────────────────────────────
 
 model Client {
-  id        String       @id @default(cuid())
-  name      String
-  email     String       @unique
-  phone     String?
-  company   String
-  industry  String?
-  website   String?
-  address   String?
-  city      String?
-  country   String?
-  status    ClientStatus @default(TRIAL)
-  notes     String?
-  createdAt DateTime     @default(now())
-  updatedAt DateTime     @updatedAt
+  id              String       @id @default(cuid())
+  name            String
+  email           String       @unique
+  phone           String?
+  company         String
+  industry        String?
+  website         String?
+  businessType    String?
+  gstNumber       String?
+  panNumber       String?
+  address         String?
+  city            String?
+  country         String?
+  pincode         String?
+  state           String?
+  locality        String?
+  addressLine1    String?
+  addressLine2    String?
+  appRequirements String[]     @default([])
+  status          ClientStatus @default(TRIAL)
+  notes           String?
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
 
-  contacts     Contact[]
-  subscription Subscription?
+  contacts      Contact[]
+  subscription  Subscription?
+  activationKey ActivationKey?
 
   @@map("clients")
 }
@@ -116,7 +133,7 @@ model Subscription {
   clientId     String       @unique
   planName     String
   price        Decimal      @db.Decimal(10, 2)
-  currency     String       @default("USD")
+  currency     String       @default("INR")
   billingCycle BillingCycle @default(MONTHLY)
   startDate    DateTime
   endDate      DateTime?
@@ -131,6 +148,21 @@ model Subscription {
   @@map("subscriptions")
 }
 
+model ActivationKey {
+  id            String    @id @default(cuid())
+  clientId      String    @unique
+  key           String    @unique
+  status        KeyStatus @default(PENDING)
+  generatedById String
+  generatedAt   DateTime  @default(now())
+  activatedAt   DateTime?
+
+  client      Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  generatedBy User   @relation("KeyGeneratedBy", fields: [generatedById], references: [id])
+
+  @@map("activation_keys")
+}
+
 // ─────────────────────────────────────────────
 // Expense
 // ─────────────────────────────────────────────
@@ -140,7 +172,7 @@ model Expense {
   title         String
   description   String?
   amount        Decimal         @db.Decimal(10, 2)
-  currency      String          @default("USD")
+  currency      String          @default("INR")
   category      ExpenseCategory
   expenseDate   DateTime
   receiptUrl    String?
