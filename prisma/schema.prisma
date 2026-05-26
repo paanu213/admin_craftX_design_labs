@@ -82,6 +82,8 @@ model Client {
   industry        String?
   website         String?
   businessType    String?
+  gstNumber       String?
+  panNumber       String?
   address         String?
   city            String?
   country         String?

@@ -290,6 +290,18 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                   {client.businessType}
                 </p>
               )}
+              {client.gstNumber && (
+                <p>
+                  <span className="text-muted-foreground">GST: </span>
+                  <span className="font-mono">{client.gstNumber}</span>
+                </p>
+              )}
+              {client.panNumber && (
+                <p>
+                  <span className="text-muted-foreground">PAN: </span>
+                  <span className="font-mono">{client.panNumber}</span>
+                </p>
+              )}
               <p>
                 <span className="text-muted-foreground">Joined: </span>
                 {formatDate(client.createdAt)}

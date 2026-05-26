@@ -68,6 +68,8 @@ export async function PUT(
         industry: body.industry ?? null,
         website: body.website ?? null,
         businessType: body.businessType ?? null,
+        gstNumber: body.gstNumber ?? null,
+        panNumber: body.panNumber ?? null,
         pincode: body.pincode ?? null,
         state: body.state ?? null,
         city: body.city ?? null,

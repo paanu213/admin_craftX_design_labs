@@ -96,6 +96,8 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
           industry: client.industry ?? "",
           website: client.website ?? "",
           businessType: client.businessType ?? "",
+          gstNumber: client.gstNumber ?? "",
+          panNumber: client.panNumber ?? "",
           pincode: client.pincode ?? "",
           state: client.state ?? "",
           city: client.city ?? "",
@@ -289,6 +291,36 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
                   ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="gstNumber">GST Number</Label>
+              <Input
+                id="gstNumber"
+                placeholder="22AAAAA0000A1Z5"
+                className="uppercase"
+                {...register("gstNumber", {
+                  setValueAs: (v: string) => v?.toUpperCase() ?? "",
+                })}
+              />
+              {errors.gstNumber && (
+                <p className="text-xs text-destructive">{errors.gstNumber.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="panNumber">PAN Number</Label>
+              <Input
+                id="panNumber"
+                placeholder="ABCDE1234F"
+                className="uppercase"
+                {...register("panNumber", {
+                  setValueAs: (v: string) => v?.toUpperCase() ?? "",
+                })}
+              />
+              {errors.panNumber && (
+                <p className="text-xs text-destructive">{errors.panNumber.message}</p>
+              )}
             </div>
 
             <div className="space-y-2">

@@ -31,6 +31,8 @@ export interface ClientWithRelations {
   city: string | null;
   country: string | null;
   businessType: string | null;
+  gstNumber: string | null;
+  panNumber: string | null;
   pincode: string | null;
   state: string | null;
   locality: string | null;

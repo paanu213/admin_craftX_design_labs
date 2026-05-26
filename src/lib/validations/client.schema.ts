@@ -8,6 +8,16 @@ export const clientSchema = z.object({
   industry: z.string().optional(),
   website: z.string().url("Invalid URL").optional().or(z.literal("")),
   businessType: z.string().optional(),
+  gstNumber: z
+    .string()
+    .regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}Z[0-9A-Z]{1}$/, "Invalid GST number")
+    .optional()
+    .or(z.literal("")),
+  panNumber: z
+    .string()
+    .regex(/^[A-Z]{5}[0-9]{4}[A-Z]{1}$/, "Invalid PAN number")
+    .optional()
+    .or(z.literal("")),
   pincode: z.string().optional(),
   state: z.string().optional(),
   city: z.string().optional(),
