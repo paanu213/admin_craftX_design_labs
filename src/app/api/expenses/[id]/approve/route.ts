@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { approvalSchema } from "@/lib/validations/expense.schema";
 
 const ALLOWED_ROLES = ["SUPER_ADMIN", "CEO", "CFO"];
 
@@ -25,12 +26,12 @@ export async function POST(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    const body: { status: "APPROVED" | "REJECTED"; rejectionNote?: string } =
-      await request.json();
+    const body = await request.json();
 
-    if (!["APPROVED", "REJECTED"].includes(body.status)) {
+    const result = approvalSchema.safeParse(body);
+    if (!result.success) {
       return NextResponse.json(
-        { error: "Status must be APPROVED or REJECTED" },
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
         { status: 400 }
       );
     }
@@ -38,9 +39,9 @@ export async function POST(
     const updated = await db.expense.update({
       where: { id },
       data: {
-        status: body.status,
+        status: result.data.status,
         rejectionNote:
-          body.status === "REJECTED" ? (body.rejectionNote ?? null) : null,
+          result.data.status === "REJECTED" ? (result.data.rejectionNote ?? null) : null,
         approvedById: session.user.id,
         approvedAt: new Date(),
       },

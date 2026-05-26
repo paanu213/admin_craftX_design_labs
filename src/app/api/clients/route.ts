@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { clientSchema } from "@/lib/validations/client.schema";
 import type { ClientStatus } from "@/generated/prisma/enums";
 
 const ALLOWED_CREATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO"];
@@ -68,26 +69,36 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const result = clientSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const data = result.data;
+
     const client = await db.client.create({
       data: {
-        name: body.name,
-        email: body.email,
-        phone: body.phone ?? null,
-        company: body.company,
-        industry: body.industry ?? null,
-        website: body.website ?? null,
-        businessType: body.businessType ?? null,
-        gstNumber: body.gstNumber ?? null,
-        panNumber: body.panNumber ?? null,
-        pincode: body.pincode ?? null,
-        state: body.state ?? null,
-        city: body.city ?? null,
-        locality: body.locality ?? null,
-        addressLine1: body.addressLine1 ?? null,
-        addressLine2: body.addressLine2 ?? null,
-        appRequirements: body.appRequirements ?? [],
-        status: body.status ?? "TRIAL",
-        notes: body.notes ?? null,
+        name: data.name,
+        email: data.email,
+        phone: data.phone || null,
+        company: data.company,
+        industry: data.industry || null,
+        website: data.website || null,
+        businessType: data.businessType || null,
+        gstNumber: data.gstNumber || null,
+        panNumber: data.panNumber || null,
+        pincode: data.pincode || null,
+        state: data.state || null,
+        city: data.city || null,
+        locality: data.locality || null,
+        addressLine1: data.addressLine1 || null,
+        addressLine2: data.addressLine2 || null,
+        appRequirements: data.appRequirements ?? [],
+        status: data.status ?? "TRIAL",
+        notes: data.notes || null,
       },
     });
 

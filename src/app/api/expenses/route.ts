@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { expenseSchema } from "@/lib/validations/expense.schema";
 import type { ExpenseStatus, ExpenseCategory } from "@/generated/prisma/enums";
 
 export async function GET(request: NextRequest) {
@@ -78,15 +79,25 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
+    const result = expenseSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const data = result.data;
+
     const expense = await db.expense.create({
       data: {
-        title: body.title,
-        description: body.description ?? null,
-        amount: body.amount,
-        currency: body.currency ?? "INR",
-        category: body.category,
-        expenseDate: new Date(body.expenseDate),
-        receiptUrl: body.receiptUrl ?? null,
+        title: data.title,
+        description: data.description || null,
+        amount: data.amount,
+        currency: data.currency ?? "INR",
+        category: data.category,
+        expenseDate: new Date(data.expenseDate),
+        receiptUrl: data.receiptUrl || null,
         status: "PENDING",
         createdById: session.user.id,
       },
