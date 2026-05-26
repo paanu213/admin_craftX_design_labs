@@ -116,19 +116,19 @@ export function ExpenseDetail({ expenseId }: { expenseId: string }) {
   return (
     <div className="space-y-6 max-w-2xl">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h2 className="text-2xl font-bold">{expense.title}</h2>
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold truncate">{expense.title}</h2>
             <p className="text-sm text-muted-foreground">
               {formatDate(expense.expenseDate)}
             </p>
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-wrap">
           <Badge variant={STATUS_VARIANT[expense.status]}>
             {EXPENSE_STATUS_LABELS[expense.status]}
           </Badge>

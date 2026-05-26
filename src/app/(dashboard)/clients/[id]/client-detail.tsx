@@ -240,14 +240,14 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   return (
     <div className="space-y-6 max-w-4xl">
       {/* Header */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Button variant="outline" size="icon" onClick={() => router.back()}>
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex items-center gap-3 min-w-0">
+          <Button variant="outline" size="icon" className="shrink-0" onClick={() => router.back()}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <div>
-            <h2 className="text-2xl font-bold">{client.name}</h2>
-            <p className="text-sm text-muted-foreground">{client.company}</p>
+          <div className="min-w-0">
+            <h2 className="text-xl sm:text-2xl font-bold truncate">{client.name}</h2>
+            <p className="text-sm text-muted-foreground truncate">{client.company}</p>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -261,7 +261,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
               onValueChange={(v) => handleStatusChange(v as ClientStatus)}
               disabled={updatingStatus}
             >
-              <SelectTrigger className="h-8 text-xs w-36">
+              <SelectTrigger className="h-8 text-xs w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -276,7 +276,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
           <RoleGuard permission="editClients">
             <Button variant="outline" size="sm" onClick={() => setEditing(true)}>
               <Edit className="h-4 w-4" />
-              Edit
+              <span className="hidden sm:inline">Edit</span>
             </Button>
           </RoleGuard>
           <RoleGuard permission="deleteClients">
@@ -287,7 +287,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
               onClick={handleDelete}
             >
               <Trash2 className="h-4 w-4" />
-              Delete
+              <span className="hidden sm:inline">Delete</span>
             </Button>
           </RoleGuard>
         </div>

@@ -106,7 +106,7 @@ export function ExpensesContent() {
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1 max-w-sm">
+        <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Search expenses..."
@@ -125,7 +125,7 @@ export function ExpensesContent() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-40">
+          <SelectTrigger className="w-full sm:w-40">
             <Filter className="h-4 w-4 mr-1 text-muted-foreground" />
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -143,7 +143,7 @@ export function ExpensesContent() {
             setPage(1);
           }}
         >
-          <SelectTrigger className="w-44">
+          <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Category" />
           </SelectTrigger>
           <SelectContent>
@@ -304,12 +304,12 @@ export function ExpensesContent() {
 
       {/* Pagination */}
       {data?.meta && data.meta.totalPages > 1 && (
-        <div className="flex items-center justify-between text-sm">
-          <p className="text-muted-foreground">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
+          <p className="text-muted-foreground text-center sm:text-left">
             Showing {(page - 1) * 10 + 1}–
             {Math.min(page * 10, data.meta.total)} of {data.meta.total} expenses
           </p>
-          <div className="flex gap-2">
+          <div className="flex gap-2 justify-center sm:justify-end">
             <Button
               variant="outline"
               size="sm"
