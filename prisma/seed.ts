@@ -52,6 +52,16 @@ async function main() {
         role: "CMO",
       },
     }),
+    db.user.upsert({
+      where: { email: "test@craftx.com" },
+      update: {},
+      create: {
+        name: "Test User",
+        email: "test@craftx.com",
+        password: await bcrypt.hash("Test@123", salt),
+        role: "CTO",
+      },
+    }),
   ]);
 
   console.log(`Created ${users.length} users`);
@@ -174,6 +184,7 @@ async function main() {
   console.log("  CEO:         ceo@craftxlabs.com  / Ceo@12345");
   console.log("  CFO:         cfo@craftxlabs.com  / Cfo@12345");
   console.log("  CMO:         cmo@craftxlabs.com  / Cmo@12345");
+  console.log("  CTO (Test):  test@craftx.com     / Test@123");
 }
 
 main()
