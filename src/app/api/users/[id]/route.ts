@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { updateUserApiSchema } from "@/lib/validations/auth.schema";
 
 const userSelect = {
   id: true,
@@ -66,17 +67,24 @@ export async function PUT(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    const body: { name?: string; role?: string; isActive?: boolean } =
-      await request.json();
+    const body = await request.json();
+
+    const result = updateUserApiSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
 
     const updated = await db.user.update({
       where: { id },
       data: {
-        ...(body.name !== undefined && { name: body.name }),
-        ...(body.role !== undefined && {
-          role: body.role as Parameters<typeof db.user.update>[0]["data"]["role"],
+        ...(result.data.name !== undefined && { name: result.data.name }),
+        ...(result.data.role !== undefined && {
+          role: result.data.role as Parameters<typeof db.user.update>[0]["data"]["role"],
         }),
-        ...(body.isActive !== undefined && { isActive: body.isActive }),
+        ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
       },
       select: userSelect,
     });

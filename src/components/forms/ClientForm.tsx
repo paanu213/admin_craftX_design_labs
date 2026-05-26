@@ -6,7 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Loader2, ArrowLeft, MapPin } from "lucide-react";
-import { clientSchema, type ClientFormData } from "@/lib/validations/client.schema";
+import { clientSchema, BUSINESS_TYPES, type ClientFormData } from "@/lib/validations/client.schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,23 +29,6 @@ import {
 import { PageHeader } from "@/components/layout/PageWrapper";
 import type { ClientWithRelations } from "@/types";
 
-const BUSINESS_TYPES = [
-  "Ecommerce",
-  "Billing App",
-  "Inventory Management",
-  "Store Management",
-  "Restaurant Management",
-  "Hospital Management",
-  "School Management",
-  "Real Estate",
-  "Logistics & Supply Chain",
-  "CRM",
-  "HR & Payroll",
-  "Finance & Accounting",
-  "Manufacturing",
-  "Travel & Hospitality",
-  "Other",
-];
 
 const APP_REQUIREMENT_OPTIONS = [
   { value: "WEB", label: "Web Application" },
@@ -95,7 +78,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
           company: client.company,
           industry: client.industry ?? "",
           website: client.website ?? "",
-          businessType: client.businessType ?? "",
+          businessType: (client.businessType ?? "") as ClientFormData["businessType"],
           gstNumber: client.gstNumber ?? "",
           panNumber: client.panNumber ?? "",
           pincode: client.pincode ?? "",
@@ -278,7 +261,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
               <Label htmlFor="businessType">Business Type</Label>
               <Select
                 defaultValue={client?.businessType ?? ""}
-                onValueChange={(v) => setValue("businessType", v)}
+                onValueChange={(v) => setValue("businessType", v as ClientFormData["businessType"])}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select business type" />

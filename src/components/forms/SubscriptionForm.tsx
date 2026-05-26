@@ -50,7 +50,7 @@ export function SubscriptionForm({
       ? {
           planName: subscription.planName,
           price: Number(subscription.price),
-          currency: subscription.currency,
+          currency: subscription.currency as SubscriptionFormData["currency"],
           billingCycle: subscription.billingCycle,
           startDate: format(new Date(subscription.startDate), "yyyy-MM-dd"),
           endDate: subscription.endDate
@@ -129,7 +129,7 @@ export function SubscriptionForm({
               <Label htmlFor="currency">Currency</Label>
               <Select
                 defaultValue="INR"
-                onValueChange={(v) => setValue("currency", v)}
+                onValueChange={(v) => setValue("currency", v as SubscriptionFormData["currency"])}
               >
                 <SelectTrigger>
                   <SelectValue />

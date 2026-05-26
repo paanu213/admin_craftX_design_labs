@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { subscriptionSchema } from "@/lib/validations/client.schema";
 import type { BillingCycle } from "@/generated/prisma/enums";
 
 export async function POST(
@@ -22,6 +23,14 @@ export async function POST(
 
     const body = await request.json();
 
+    const result = subscriptionSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
     const {
       planName,
       price,
@@ -32,17 +41,7 @@ export async function POST(
       renewalDate,
       isAutoRenew,
       features,
-    }: {
-      planName: string;
-      price: number;
-      currency: string;
-      billingCycle: BillingCycle;
-      startDate: string;
-      endDate?: string;
-      renewalDate?: string;
-      isAutoRenew: boolean;
-      features: string[];
-    } = body;
+    } = result.data;
 
     const subscription = await db.subscription.upsert({
       where: { clientId },
@@ -51,7 +50,7 @@ export async function POST(
         planName,
         price,
         currency: currency ?? "INR",
-        billingCycle: billingCycle ?? "MONTHLY",
+        billingCycle: billingCycle as BillingCycle,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         renewalDate: renewalDate ? new Date(renewalDate) : null,
@@ -62,7 +61,7 @@ export async function POST(
         planName,
         price,
         currency: currency ?? "INR",
-        billingCycle: billingCycle ?? "MONTHLY",
+        billingCycle: billingCycle as BillingCycle,
         startDate: new Date(startDate),
         endDate: endDate ? new Date(endDate) : null,
         renewalDate: renewalDate ? new Date(renewalDate) : null,

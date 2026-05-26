@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
+import { createUserApiSchema } from "@/lib/validations/auth.schema";
 
 export async function GET() {
   try {
@@ -46,10 +47,17 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const body: { name: string; email: string; password: string; role: string } =
-      await request.json();
+    const body = await request.json();
 
-    const existing = await db.user.findUnique({ where: { email: body.email } });
+    const result = createUserApiSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const existing = await db.user.findUnique({ where: { email: result.data.email } });
     if (existing) {
       return NextResponse.json(
         { error: "A user with this email already exists" },
@@ -57,14 +65,14 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const hashedPassword = await bcrypt.hash(body.password, 10);
+    const hashedPassword = await bcrypt.hash(result.data.password, 10);
 
     const user = await db.user.create({
       data: {
-        name: body.name,
-        email: body.email,
+        name: result.data.name,
+        email: result.data.email,
         password: hashedPassword,
-        role: body.role as Parameters<typeof db.user.create>[0]["data"]["role"],
+        role: result.data.role as Parameters<typeof db.user.create>[0]["data"]["role"],
       },
       select: {
         id: true,

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { expenseSchema } from "@/lib/validations/expense.schema";
 
 const ALLOWED_ROLES = ["SUPER_ADMIN", "CEO", "CFO"];
 
@@ -52,21 +53,31 @@ export async function PUT(
     const { id } = await params;
     const body = await request.json();
 
+    const result = expenseSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
     const existing = await db.expense.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
+    const data = result.data;
+
     const updated = await db.expense.update({
       where: { id },
       data: {
-        title: body.title,
-        description: body.description ?? null,
-        amount: body.amount,
-        currency: body.currency,
-        category: body.category,
-        expenseDate: body.expenseDate ? new Date(body.expenseDate) : undefined,
-        receiptUrl: body.receiptUrl ?? null,
+        title: data.title,
+        description: data.description || null,
+        amount: data.amount,
+        currency: data.currency,
+        category: data.category,
+        expenseDate: new Date(data.expenseDate),
+        receiptUrl: data.receiptUrl || null,
       },
       include: {
         createdBy: { select: { id: true, name: true, role: true } },

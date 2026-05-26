@@ -50,7 +50,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
           title: expense.title,
           description: expense.description ?? "",
           amount: Number(expense.amount),
-          currency: expense.currency,
+          currency: expense.currency as ExpenseFormData["currency"],
           category: expense.category,
           expenseDate: format(new Date(expense.expenseDate), "yyyy-MM-dd"),
           receiptUrl: expense.receiptUrl ?? "",
@@ -142,7 +142,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
               <Label>Currency</Label>
               <Select
                 defaultValue={expense?.currency ?? "INR"}
-                onValueChange={(v) => setValue("currency", v)}
+                onValueChange={(v) => setValue("currency", v as ExpenseFormData["currency"])}
               >
                 <SelectTrigger>
                   <SelectValue />
