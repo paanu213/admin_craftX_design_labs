@@ -74,7 +74,8 @@ function buildClientPayload(client: {
   city: string | null; state: string | null; pincode: string | null;
   appRequirements: string[]; status: string;
   subscription: {
-    planName: string; billingCycle: BillingCycle; price: object;
+    planName: string; billingCycle: BillingCycle;
+    price: { toString(): string };
     currency: string; startDate: Date; renewalDate: Date | null;
     endDate: Date | null; isAutoRenew: boolean; features: string[];
   } | null;
