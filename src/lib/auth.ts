@@ -6,6 +6,7 @@ import { loginSchema } from "@/lib/validations/auth.schema";
 import type { UserRole } from "@/types";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
+  trustHost: true,
   providers: [
     Credentials({
       async authorize(credentials) {
