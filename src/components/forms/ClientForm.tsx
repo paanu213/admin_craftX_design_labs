@@ -101,7 +101,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
     if (watchedPincode.length !== 6 || !/^\d{6}$/.test(watchedPincode)) return;
 
     setPincodeLoading(true);
-    fetch(`https://api.postalpincode.in/pincode/${watchedPincode}`)
+    fetch(`/api/pincode/${watchedPincode}`)
       .then((r) => r.json())
       .then((data) => {
         if (data[0]?.Status === "Success" && data[0].PostOffice?.length > 0) {
