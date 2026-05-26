@@ -44,7 +44,11 @@ export function ExpenseDetail({ expenseId }: { expenseId: string }) {
 
   const { data: expense, isLoading } = useQuery<ExpenseWithRelations>({
     queryKey: ["expense", expenseId],
-    queryFn: () => fetch(`/api/expenses/${expenseId}`).then((r) => r.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/expenses/${expenseId}`);
+      if (!res.ok) throw new Error("Failed to load expense");
+      return res.json();
+    },
   });
 
   async function handleApprove(status: "APPROVED" | "REJECTED") {

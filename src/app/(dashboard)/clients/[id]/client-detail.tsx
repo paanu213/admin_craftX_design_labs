@@ -94,7 +94,11 @@ export function ClientDetail({ clientId }: { clientId: string }) {
 
   const { data: client, isLoading } = useQuery<ClientWithRelations>({
     queryKey: ["client", clientId],
-    queryFn: () => fetch(`/api/clients/${clientId}`).then((r) => r.json()),
+    queryFn: async () => {
+      const res = await fetch(`/api/clients/${clientId}`);
+      if (!res.ok) throw new Error("Failed to load client");
+      return res.json();
+    },
   });
 
   async function handleDelete() {

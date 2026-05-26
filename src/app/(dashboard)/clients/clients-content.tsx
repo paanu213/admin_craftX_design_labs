@@ -50,14 +50,16 @@ export function ClientsContent() {
 
   const { data, isLoading, refetch } = useQuery<ClientsResponse>({
     queryKey: ["clients", page, search, statusFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         limit: "10",
         ...(search && { search }),
         ...(statusFilter !== "ALL" && { status: statusFilter }),
       });
-      return fetch(`/api/clients?${params}`).then((r) => r.json());
+      const res = await fetch(`/api/clients?${params}`);
+      if (!res.ok) throw new Error("Failed to load clients");
+      return res.json();
     },
   });
 
