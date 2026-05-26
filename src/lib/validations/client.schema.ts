@@ -24,7 +24,7 @@ export const clientSchema = z.object({
   locality: z.string().optional(),
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
-  appRequirements: z.array(z.string()).default([]),
+  appRequirements: z.array(z.string()),
   status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "CHURNED"]),
   notes: z.string().optional(),
 });
