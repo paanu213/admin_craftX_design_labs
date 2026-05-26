@@ -17,7 +17,7 @@ export const clientSchema = z.object({
 export const subscriptionSchema = z.object({
   planName: z.string().min(1, "Plan name is required"),
   price: z.number().positive("Price must be positive"),
-  currency: z.string().default("USD"),
+  currency: z.string().default("INR"),
   billingCycle: z.enum(["MONTHLY", "QUARTERLY", "ANNUALLY"]),
   startDate: z.string().min(1, "Start date is required"),
   endDate: z.string().optional(),

@@ -4,7 +4,7 @@ export const expenseSchema = z.object({
   title: z.string().min(3, "Title must be at least 3 characters"),
   description: z.string().optional(),
   amount: z.number().positive("Amount must be positive"),
-  currency: z.string().default("USD"),
+  currency: z.string().default("INR"),
   category: z.enum([
     "SAAS",
     "PAYROLL",

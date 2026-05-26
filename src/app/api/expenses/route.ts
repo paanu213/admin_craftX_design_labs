@@ -83,7 +83,7 @@ export async function POST(request: NextRequest) {
         title: body.title,
         description: body.description ?? null,
         amount: body.amount,
-        currency: body.currency ?? "USD",
+        currency: body.currency ?? "INR",
         category: body.category,
         expenseDate: new Date(body.expenseDate),
         receiptUrl: body.receiptUrl ?? null,

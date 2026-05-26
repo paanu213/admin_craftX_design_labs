@@ -136,7 +136,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
               <Input
                 id="phone"
                 type="tel"
-                placeholder="+1 (555) 000-0000"
+                placeholder="+91 98765 43210"
                 {...register("phone")}
               />
             </div>
@@ -225,12 +225,12 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
 
             <div className="space-y-2">
               <Label htmlFor="city">City</Label>
-              <Input id="city" placeholder="San Francisco" {...register("city")} />
+              <Input id="city" placeholder="Mumbai" {...register("city")} />
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="country">Country</Label>
-              <Input id="country" placeholder="United States" {...register("country")} />
+              <Input id="country" placeholder="India" {...register("country")} />
             </div>
           </CardContent>
         </Card>
