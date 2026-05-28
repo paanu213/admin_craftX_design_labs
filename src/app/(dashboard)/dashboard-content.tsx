@@ -1,6 +1,7 @@
 "use client";
 
 import { useQuery } from "@tanstack/react-query";
+import { useRouter } from "next/navigation";
 import {
   Users,
   Receipt,
@@ -8,10 +9,12 @@ import {
   Clock,
   UserCheck,
   DollarSign,
+  ArrowRight,
 } from "lucide-react";
 import { StatCard } from "@/components/ui/stat-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { formatCurrency, formatDate, CLIENT_STATUS_LABELS } from "@/lib/utils";
 import {
@@ -46,6 +49,14 @@ const CATEGORY_COLORS = [
   "#f97316",
 ];
 
+interface TopSpender {
+  userId: string;
+  name: string;
+  role: string;
+  total: number;
+  count: number;
+}
+
 interface DashboardData {
   totalClients: number;
   activeClients: number;
@@ -53,6 +64,8 @@ interface DashboardData {
   totalExpenses: number;
   pendingExpenses: number;
   monthlyExpenses: number;
+  isAdmin: boolean;
+  topSpenders: TopSpender[];
   recentClients: Array<{
     id: string;
     name: string;
@@ -95,7 +108,16 @@ function DashboardSkeleton() {
   );
 }
 
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  CEO: "CEO",
+  CMO: "CMO",
+  CFO: "CFO",
+  CTO: "CTO",
+};
+
 export function DashboardContent({ userName }: { userName: string }) {
+  const router = useRouter();
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["dashboard"],
     queryFn: () => fetch("/api/dashboard").then((r) => r.json()),
@@ -250,6 +272,52 @@ export function DashboardContent({ userName }: { userName: string }) {
           </CardContent>
         </Card>
       </div>
+
+      {/* Top Spenders */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between pb-3">
+          <CardTitle className="text-base">
+            {data?.isAdmin ? "Top 5 Spenders" : "My Expense Summary"}
+          </CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="text-xs gap-1 text-muted-foreground"
+            onClick={() => router.push("/expenses")}
+          >
+            View All <ArrowRight className="h-3 w-3" />
+          </Button>
+        </CardHeader>
+        <CardContent>
+          {!data?.topSpenders?.length ? (
+            <p className="text-sm text-muted-foreground text-center py-4">
+              No expenses recorded yet
+            </p>
+          ) : (
+            <div className="space-y-1">
+              {data.topSpenders.map((spender, index) => (
+                <div
+                  key={spender.userId}
+                  className="flex items-center gap-3 py-2 border-b border-border last:border-0"
+                >
+                  <span className="text-sm font-bold text-muted-foreground w-5 text-center">
+                    {index + 1}
+                  </span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{spender.name}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {ROLE_LABELS[spender.role] ?? spender.role} &middot; {spender.count} expense{spender.count !== 1 ? "s" : ""}
+                    </p>
+                  </div>
+                  <p className="text-sm font-semibold text-foreground whitespace-nowrap">
+                    {formatCurrency(spender.total)}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Recent Clients */}
       <Card>

@@ -12,10 +12,11 @@ export const PERMISSIONS = {
 
   // Expense Management
   viewExpenses: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
+  viewAllExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO"] as UserRole[],
   createExpenses: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  editExpenses: ["SUPER_ADMIN", "CEO", "CFO"] as UserRole[],
-  deleteExpenses: ["SUPER_ADMIN", "CEO", "CFO"] as UserRole[],
-  approveExpenses: ["SUPER_ADMIN", "CEO", "CFO"] as UserRole[],
+  editExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO"] as UserRole[],
+  deleteExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO"] as UserRole[],
+  approveExpenses: ["SUPER_ADMIN", "CEO"] as UserRole[],
 
   // Reports
   viewReports: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],

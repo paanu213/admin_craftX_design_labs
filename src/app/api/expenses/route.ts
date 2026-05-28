@@ -4,12 +4,16 @@ import { db } from "@/lib/db";
 import { expenseSchema } from "@/lib/validations/expense.schema";
 import type { ExpenseStatus, ExpenseCategory } from "@/generated/prisma/enums";
 
+const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const isAdmin = ADMIN_ROLES.includes(session.user.role);
 
     const { searchParams } = new URL(request.url);
     const page = Math.max(1, Number(searchParams.get("page") ?? 1));
@@ -21,6 +25,8 @@ export async function GET(request: NextRequest) {
     const endDate = searchParams.get("endDate");
 
     const where = {
+      // Non-admin roles only see their own expenses
+      ...(!isAdmin && { createdById: session.user.id }),
       ...(search && {
         title: { contains: search, mode: "insensitive" as const },
       }),

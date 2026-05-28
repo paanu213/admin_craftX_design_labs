@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { approvalSchema } from "@/lib/validations/expense.schema";
 
-const ALLOWED_ROLES = ["SUPER_ADMIN", "CEO", "CFO"];
+const ALLOWED_ROLES = ["SUPER_ADMIN", "CEO"];
 
 export async function POST(
   request: NextRequest,

@@ -2,12 +2,17 @@ import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 
+const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+
 export async function GET() {
   try {
     const session = await auth();
     if (!session) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
+
+    const isAdmin = ADMIN_ROLES.includes(session.user.role);
+    const ownFilter = isAdmin ? {} : { createdById: session.user.id };
 
     const now = new Date();
     const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -24,81 +29,108 @@ export async function GET() {
     });
 
     const [
-      totalClients,
-      activeClients,
-      trialClients,
-      totalExpensesResult,
-      pendingExpenses,
-      monthlyExpensesResult,
-      recentClients,
-      expenseByCategory,
-      clientsByStatus,
-      ...monthlyTrendResults
+      [
+        totalClients,
+        activeClients,
+        trialClients,
+        totalExpensesResult,
+        pendingExpenses,
+        monthlyExpensesResult,
+        recentClients,
+        expenseByCategory,
+        clientsByStatus,
+        ...monthlyTrendResults
+      ],
+      topSpendersGroupBy,
     ] = await Promise.all([
-      // Total clients
-      db.client.count(),
-
-      // Active clients
-      db.client.count({ where: { status: "ACTIVE" } }),
-
-      // Trial clients
-      db.client.count({ where: { status: "TRIAL" } }),
-
-      // Total approved expenses sum
-      db.expense.aggregate({
-        where: { status: "APPROVED" },
-        _sum: { amount: true },
-      }),
-
-      // Pending expenses count
-      db.expense.count({ where: { status: "PENDING" } }),
-
-      // Monthly approved expenses sum
-      db.expense.aggregate({
-        where: {
-          status: "APPROVED",
-          expenseDate: { gte: startOfMonth, lte: endOfMonth },
-        },
-        _sum: { amount: true },
-      }),
-
-      // Recent 5 clients
-      db.client.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        select: {
-          id: true,
-          name: true,
-          company: true,
-          status: true,
-          createdAt: true,
-        },
-      }),
-
-      // Expense by category (APPROVED only)
-      db.expense.groupBy({
-        by: ["category"],
-        where: { status: "APPROVED" },
-        _sum: { amount: true },
-      }),
-
-      // Clients by status
-      db.client.groupBy({
-        by: ["status"],
-        _count: { id: true },
-      }),
-
-      // Monthly expense trend — one query per month
-      ...last6Months.map((month) =>
+      Promise.all([
+        // Total clients
+        db.client.count(),
+        // Active clients
+        db.client.count({ where: { status: "ACTIVE" } }),
+        // Trial clients
+        db.client.count({ where: { status: "TRIAL" } }),
+        // Total approved expenses sum
+        db.expense.aggregate({
+          where: { status: "APPROVED", ...ownFilter },
+          _sum: { amount: true },
+        }),
+        // Pending expenses count
+        db.expense.count({ where: { status: "PENDING", ...ownFilter } }),
+        // Monthly approved expenses sum
         db.expense.aggregate({
           where: {
             status: "APPROVED",
-            expenseDate: { gte: month.start, lte: month.end },
+            ...ownFilter,
+            expenseDate: { gte: startOfMonth, lte: endOfMonth },
           },
           _sum: { amount: true },
-        })
-      ),
+        }),
+        // Recent 5 clients
+        db.client.findMany({
+          take: 5,
+          orderBy: { createdAt: "desc" },
+          select: {
+            id: true,
+            name: true,
+            company: true,
+            status: true,
+            createdAt: true,
+          },
+        }),
+        // Expense by category (APPROVED only)
+        db.expense.groupBy({
+          by: ["category"],
+          where: { status: "APPROVED", ...ownFilter },
+          _sum: { amount: true },
+        }),
+        // Clients by status
+        db.client.groupBy({
+          by: ["status"],
+          _count: { id: true },
+        }),
+        // Monthly expense trend — one query per month
+        ...last6Months.map((month) =>
+          db.expense.aggregate({
+            where: {
+              status: "APPROVED",
+              ...ownFilter,
+              expenseDate: { gte: month.start, lte: month.end },
+            },
+            _sum: { amount: true },
+          })
+        ),
+      ]),
+      // Top 5 spenders by total submitted amount
+      db.expense.groupBy({
+        by: ["createdById"],
+        where: ownFilter,
+        _sum: { amount: true },
+        _count: { id: true },
+        orderBy: { _sum: { amount: "desc" } },
+        take: 5,
+      }),
     ]);
+
+    const spenderIds = topSpendersGroupBy.map((s: { createdById: string }) => s.createdById);
+    const spenderUsers =
+      spenderIds.length > 0
+        ? await db.user.findMany({
+            where: { id: { in: spenderIds } },
+            select: { id: true, name: true, role: true },
+          })
+        : [];
+
+    const topSpenders = topSpendersGroupBy.map((s: { createdById: string; _sum: { amount?: unknown }; _count: { id: number } }) => {
+      const user = spenderUsers.find((u) => u.id === s.createdById);
+      return {
+        userId: s.createdById,
+        name: user?.name ?? "Unknown",
+        role: user?.role ?? "",
+        total: Number(s._sum.amount ?? 0),
+        count: s._count.id,
+      };
+    });
 
     const monthlyExpenseTrend = last6Months.map((month, i) => ({
       label: month.label,
@@ -122,6 +154,8 @@ export async function GET() {
         count: item._count.id,
       })),
       monthlyExpenseTrend,
+      topSpenders,
+      isAdmin,
     });
   } catch (error) {
     console.error("[GET /api/dashboard]", error);

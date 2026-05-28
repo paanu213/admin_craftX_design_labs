@@ -3,7 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { expenseSchema } from "@/lib/validations/expense.schema";
 
-const ALLOWED_ROLES = ["SUPER_ADMIN", "CEO", "CFO"];
+const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
 
 export async function GET(
   _request: NextRequest,
@@ -46,10 +46,6 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!ALLOWED_ROLES.includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
     const body = await request.json();
 
@@ -64,6 +60,11 @@ export async function PUT(
     const existing = await db.expense.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    const isAdmin = ADMIN_ROLES.includes(session.user.role);
+    if (!isAdmin && existing.createdById !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     const data = result.data;
@@ -102,15 +103,16 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!ALLOWED_ROLES.includes(session.user.role)) {
-      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
-    }
-
     const { id } = await params;
 
     const existing = await db.expense.findUnique({ where: { id } });
     if (!existing) {
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
+    }
+
+    const isAdminForDelete = ADMIN_ROLES.includes(session.user.role);
+    if (!isAdminForDelete && existing.createdById !== session.user.id) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
     await db.expense.delete({ where: { id } });

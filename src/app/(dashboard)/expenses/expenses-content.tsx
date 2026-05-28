@@ -4,11 +4,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Search, Filter, Eye, CheckCircle, XCircle, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, Eye, CheckCircle, XCircle, Trash2, TrendingUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageWrapper";
 import { RoleGuard } from "@/components/guards/RoleGuard";
@@ -27,6 +27,26 @@ import {
 } from "@/lib/utils";
 import type { ExpenseStatus, ExpenseWithRelations } from "@/types";
 
+const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+
+interface SpendingSummaryItem {
+  userId: string;
+  name: string;
+  role: string;
+  total: number;
+  count: number;
+  approvedAmount: number;
+  pendingCount: number;
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  SUPER_ADMIN: "Super Admin",
+  CEO: "CEO",
+  CMO: "CMO",
+  CFO: "CFO",
+  CTO: "CTO",
+};
+
 const STATUS_VARIANT: Record<ExpenseStatus, "warning" | "success" | "destructive"> = {
   PENDING: "warning",
   APPROVED: "success",
@@ -38,12 +58,18 @@ interface ExpensesResponse {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
-export function ExpensesContent() {
+export function ExpensesContent({ userRole }: { userRole: string }) {
   const router = useRouter();
+  const isAdmin = ADMIN_ROLES.includes(userRole);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [page, setPage] = useState(1);
+
+  const { data: summary } = useQuery<SpendingSummaryItem[]>({
+    queryKey: ["expenses-summary"],
+    queryFn: () => fetch("/api/expenses/summary").then((r) => r.json()),
+  });
 
   const { data, isLoading, refetch } = useQuery<ExpensesResponse>({
     queryKey: ["expenses", page, search, statusFilter, categoryFilter],
@@ -60,15 +86,21 @@ export function ExpensesContent() {
   });
 
   async function handleApprove(id: string, status: "APPROVED" | "REJECTED") {
-    const note =
-      status === "REJECTED"
-        ? prompt("Reason for rejection (optional):")
-        : undefined;
+    let rejectionNote: string | undefined;
+
+    if (status === "REJECTED") {
+      const note = prompt("Reason for rejection (required):");
+      if (!note?.trim()) {
+        toast.error("A rejection reason is required");
+        return;
+      }
+      rejectionNote = note.trim();
+    }
 
     const res = await fetch(`/api/expenses/${id}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, ...(note && { rejectionNote: note }) }),
+      body: JSON.stringify({ status, ...(rejectionNote && { rejectionNote }) }),
     });
 
     if (res.ok) {
@@ -103,6 +135,60 @@ export function ExpensesContent() {
           </Button>
         }
       />
+
+      {/* Spending Summary */}
+      {summary && summary.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <TrendingUp className="h-4 w-4 text-muted-foreground" />
+              {isAdmin ? "Spending by Team Member" : "My Spending Overview"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border bg-muted/40">
+                    <th className="px-4 py-2 text-left font-medium text-muted-foreground">Name</th>
+                    {isAdmin && (
+                      <th className="px-4 py-2 text-left font-medium text-muted-foreground hidden sm:table-cell">Role</th>
+                    )}
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground">Total</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground hidden md:table-cell">Approved</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground"># Expenses</th>
+                    <th className="px-4 py-2 text-right font-medium text-muted-foreground hidden md:table-cell">Pending</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {summary.map((item) => (
+                    <tr key={item.userId} className="border-b border-border last:border-0 hover:bg-muted/30">
+                      <td className="px-4 py-2 font-medium">{item.name}</td>
+                      {isAdmin && (
+                        <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">
+                          {ROLE_LABELS[item.role] ?? item.role}
+                        </td>
+                      )}
+                      <td className="px-4 py-2 text-right font-semibold">{formatCurrency(item.total)}</td>
+                      <td className="px-4 py-2 text-right text-emerald-600 hidden md:table-cell">
+                        {formatCurrency(item.approvedAmount)}
+                      </td>
+                      <td className="px-4 py-2 text-right text-muted-foreground">{item.count}</td>
+                      <td className="px-4 py-2 text-right hidden md:table-cell">
+                        {item.pendingCount > 0 ? (
+                          <Badge variant="warning">{item.pendingCount} pending</Badge>
+                        ) : (
+                          <span className="text-muted-foreground text-xs">—</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
