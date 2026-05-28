@@ -6,7 +6,7 @@ export const PERMISSIONS = {
 
   // Client Management
   viewClients: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  createClients: ["SUPER_ADMIN", "CEO", "CMO"] as UserRole[],
+  createClients: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
   editClients: ["SUPER_ADMIN", "CEO", "CMO"] as UserRole[],
   deleteClients: ["SUPER_ADMIN", "CEO"] as UserRole[],
 

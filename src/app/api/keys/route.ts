@@ -116,19 +116,25 @@ export async function POST(request: NextRequest) {
 
     const uniqueKey = await generateUniqueKey();
 
-    // Delete any previous key before creating — ensures one key per client at all times
+    // Delete any previous key and update client status — all in one transaction
     await db.activationKey.deleteMany({ where: { clientId } });
 
-    const record = await db.activationKey.create({
-      data: {
-        clientId,
-        key: uniqueKey,
-        generatedById: session.user.id,
-      },
-      include: {
-        generatedBy: { select: { id: true, name: true, role: true } },
-      },
-    });
+    const [record] = await db.$transaction([
+      db.activationKey.create({
+        data: {
+          clientId,
+          key: uniqueKey,
+          generatedById: session.user.id,
+        },
+        include: {
+          generatedBy: { select: { id: true, name: true, role: true } },
+        },
+      }),
+      db.client.update({
+        where: { id: clientId },
+        data: { status: "KEY_GENERATED" },
+      }),
+    ]);
 
     return NextResponse.json(record, { status: 201 });
   } catch (error) {

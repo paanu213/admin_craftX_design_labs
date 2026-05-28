@@ -45,19 +45,10 @@ import {
   formatCurrency,
   formatDate,
   CLIENT_STATUS_LABELS,
+  CLIENT_STATUS_VARIANT,
   BILLING_CYCLE_LABELS,
 } from "@/lib/utils";
-import type { ClientStatus, ClientWithRelations } from "@/types";
-
-const STATUS_VARIANT_MAP: Record<
-  ClientStatus,
-  "success" | "info" | "warning" | "destructive"
-> = {
-  ACTIVE: "success",
-  TRIAL: "info",
-  INACTIVE: "warning",
-  CHURNED: "destructive",
-};
+import type { ClientWithRelations } from "@/types";
 
 const KEY_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive"> = {
   ACTIVE: "success",
@@ -112,7 +103,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     }
   }
 
-  async function handleStatusChange(newStatus: ClientStatus) {
+  async function handleStatusChange(newStatus: string) {
     if (!client) return;
     setUpdatingStatus(true);
     const res = await fetch(`/api/clients/${clientId}`, {
@@ -255,24 +246,26 @@ export function ClientDetail({ clientId }: { clientId: string }) {
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant={STATUS_VARIANT_MAP[client.status]}>
+          <Badge variant={CLIENT_STATUS_VARIANT[client.status] ?? "secondary"}>
             {CLIENT_STATUS_LABELS[client.status]}
           </Badge>
 
           <RoleGuard permission="editClients">
             <Select
               defaultValue={client.status}
-              onValueChange={(v) => handleStatusChange(v as ClientStatus)}
+              onValueChange={(v) => handleStatusChange(v)}
               disabled={updatingStatus}
             >
               <SelectTrigger className="h-8 text-xs w-32">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TRIAL">Trial</SelectItem>
+                <SelectItem value="REGISTERED">Registered</SelectItem>
+                <SelectItem value="KEY_GENERATED">Key Generated</SelectItem>
                 <SelectItem value="ACTIVE">Active</SelectItem>
                 <SelectItem value="INACTIVE">Inactive</SelectItem>
                 <SelectItem value="CHURNED">Churned</SelectItem>
+                <SelectItem value="TRIAL">Trial</SelectItem>
               </SelectContent>
             </Select>
           </RoleGuard>

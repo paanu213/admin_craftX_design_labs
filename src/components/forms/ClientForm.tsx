@@ -91,7 +91,7 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
           status: client.status,
           notes: client.notes ?? "",
         }
-      : { status: "TRIAL", appRequirements: [] },
+      : { status: "REGISTERED" as const, appRequirements: [] },
   });
 
   const watchedPincode = watch("pincode") ?? "";
@@ -214,28 +214,32 @@ export function ClientForm({ client, onSuccess }: ClientFormProps) {
               />
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="status">Status *</Label>
-              <Select
-                defaultValue={client?.status ?? "TRIAL"}
-                onValueChange={(v) =>
-                  setValue("status", v as ClientFormData["status"])
-                }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="ACTIVE">Active</SelectItem>
-                  <SelectItem value="TRIAL">Trial</SelectItem>
-                  <SelectItem value="INACTIVE">Inactive</SelectItem>
-                  <SelectItem value="CHURNED">Churned</SelectItem>
-                </SelectContent>
-              </Select>
-              {errors.status && (
-                <p className="text-xs text-destructive">{errors.status.message}</p>
-              )}
-            </div>
+            {client && (
+              <div className="space-y-2">
+                <Label htmlFor="status">Status</Label>
+                <Select
+                  defaultValue={client.status}
+                  onValueChange={(v) =>
+                    setValue("status", v as ClientFormData["status"])
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="REGISTERED">Registered</SelectItem>
+                    <SelectItem value="KEY_GENERATED">Key Generated</SelectItem>
+                    <SelectItem value="ACTIVE">Active</SelectItem>
+                    <SelectItem value="INACTIVE">Inactive</SelectItem>
+                    <SelectItem value="CHURNED">Churned</SelectItem>
+                    <SelectItem value="TRIAL">Trial</SelectItem>
+                  </SelectContent>
+                </Select>
+                {errors.status && (
+                  <p className="text-xs text-destructive">{errors.status.message}</p>
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

@@ -46,10 +46,21 @@ export const ROLE_LABELS: Record<string, string> = {
 };
 
 export const CLIENT_STATUS_LABELS: Record<string, string> = {
+  REGISTERED: "Registered",
+  KEY_GENERATED: "Key Generated",
   ACTIVE: "Active",
   INACTIVE: "Inactive",
   TRIAL: "Trial",
   CHURNED: "Churned",
+};
+
+export const CLIENT_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "destructive" | "secondary" | "muted"> = {
+  REGISTERED: "secondary",
+  KEY_GENERATED: "info",
+  ACTIVE: "success",
+  INACTIVE: "warning",
+  TRIAL: "secondary",
+  CHURNED: "destructive",
 };
 
 export const EXPENSE_CATEGORY_LABELS: Record<string, string> = {

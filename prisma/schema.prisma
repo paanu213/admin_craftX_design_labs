@@ -20,6 +20,8 @@ enum UserRole {
 }
 
 enum ClientStatus {
+  REGISTERED
+  KEY_GENERATED
   ACTIVE
   INACTIVE
   TRIAL

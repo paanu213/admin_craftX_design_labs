@@ -16,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatCurrency, formatDate, CLIENT_STATUS_LABELS } from "@/lib/utils";
+import { formatCurrency, formatDate, CLIENT_STATUS_LABELS, CLIENT_STATUS_VARIANT } from "@/lib/utils";
 import {
   AreaChart,
   Area,
@@ -30,7 +30,6 @@ import {
   Cell,
   Legend,
 } from "recharts";
-import type { ClientStatus } from "@/types";
 
 const STATUS_COLORS: Record<string, string> = {
   ACTIVE: "#22c55e",
@@ -70,7 +69,7 @@ interface DashboardData {
     id: string;
     name: string;
     company: string;
-    status: ClientStatus;
+    status: string;
     createdAt: string;
   }>;
   expenseByCategory: Array<{ category: string; total: number }>;
@@ -78,16 +77,10 @@ interface DashboardData {
   monthlyExpenseTrend: Array<{ label: string; total: number }>;
 }
 
-function StatusBadge({ status }: { status: ClientStatus }) {
-  const variantMap: Record<ClientStatus, "success" | "info" | "warning" | "destructive"> = {
-    ACTIVE: "success",
-    TRIAL: "info",
-    INACTIVE: "warning",
-    CHURNED: "destructive",
-  };
+function StatusBadge({ status }: { status: string }) {
   return (
-    <Badge variant={variantMap[status]}>
-      {CLIENT_STATUS_LABELS[status]}
+    <Badge variant={CLIENT_STATUS_VARIANT[status] ?? "secondary"}>
+      {CLIENT_STATUS_LABELS[status] ?? status}
     </Badge>
   );
 }

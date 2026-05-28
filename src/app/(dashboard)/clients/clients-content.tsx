@@ -23,19 +23,10 @@ import {
   formatCurrency,
   formatDate,
   CLIENT_STATUS_LABELS,
+  CLIENT_STATUS_VARIANT,
   BILLING_CYCLE_LABELS,
 } from "@/lib/utils";
-import type { ClientStatus, ClientWithRelations } from "@/types";
-
-const STATUS_VARIANT_MAP: Record<
-  ClientStatus,
-  "success" | "info" | "warning" | "destructive"
-> = {
-  ACTIVE: "success",
-  TRIAL: "info",
-  INACTIVE: "warning",
-  CHURNED: "destructive",
-};
+import type { ClientWithRelations } from "@/types";
 
 interface ClientsResponse {
   data: ClientWithRelations[];
@@ -116,6 +107,8 @@ export function ClientsContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Status</SelectItem>
+            <SelectItem value="REGISTERED">Registered</SelectItem>
+            <SelectItem value="KEY_GENERATED">Key Generated</SelectItem>
             <SelectItem value="ACTIVE">Active</SelectItem>
             <SelectItem value="TRIAL">Trial</SelectItem>
             <SelectItem value="INACTIVE">Inactive</SelectItem>
@@ -188,7 +181,7 @@ export function ClientsContent() {
                         {client.company}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={STATUS_VARIANT_MAP[client.status]}>
+                        <Badge variant={CLIENT_STATUS_VARIANT[client.status] ?? "secondary"}>
                           {CLIENT_STATUS_LABELS[client.status]}
                         </Badge>
                       </td>

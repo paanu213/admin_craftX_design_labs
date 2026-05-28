@@ -4,7 +4,7 @@ import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validations/client.schema";
 import type { ClientStatus } from "@/generated/prisma/enums";
 
-const ALLOWED_CREATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO"];
+const ALLOWED_CREATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"];
 
 export async function GET(request: NextRequest) {
   try {
@@ -109,7 +109,7 @@ export async function POST(request: NextRequest) {
         addressLine1: data.addressLine1 || null,
         addressLine2: data.addressLine2 || null,
         appRequirements: data.appRequirements ?? [],
-        status: data.status ?? "TRIAL",
+        status: "REGISTERED",
         notes: data.notes || null,
       },
     });

@@ -58,7 +58,7 @@ export const clientSchema = z.object({
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
   appRequirements: z.array(z.string()),
-  status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "CHURNED"]),
+  status: z.enum(["REGISTERED", "KEY_GENERATED", "ACTIVE", "INACTIVE", "TRIAL", "CHURNED"]),
   notes: z.string().optional(),
 });
 
