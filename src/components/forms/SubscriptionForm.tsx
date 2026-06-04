@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
@@ -21,7 +22,17 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageWrapper";
 import type { Subscription } from "@/types";
-import { format } from "date-fns";
+import { format, addMonths, addYears, subDays } from "date-fns";
+
+function computeRenewalDate(startDate: string, billingCycle: string): string {
+  const start = new Date(startDate);
+  if (isNaN(start.getTime())) return "";
+  let next: Date;
+  if (billingCycle === "MONTHLY") next = addMonths(start, 1);
+  else if (billingCycle === "QUARTERLY") next = addMonths(start, 3);
+  else next = addYears(start, 1);
+  return format(subDays(next, 1), "yyyy-MM-dd");
+}
 
 interface SubscriptionFormProps {
   clientId: string;
@@ -42,6 +53,7 @@ export function SubscriptionForm({
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<SubscriptionFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -69,6 +81,15 @@ export function SubscriptionForm({
           features: [],
         },
   });
+
+  const watchedStartDate = watch("startDate");
+  const watchedBillingCycle = watch("billingCycle");
+
+  useEffect(() => {
+    if (!watchedStartDate) return;
+    const renewal = computeRenewalDate(watchedStartDate, watchedBillingCycle ?? "MONTHLY");
+    if (renewal) setValue("renewalDate", renewal);
+  }, [watchedStartDate, watchedBillingCycle, setValue]);
 
   async function onSubmit(data: SubscriptionFormData) {
     const res = await fetch(`/api/clients/${clientId}/subscription`, {
@@ -181,6 +202,9 @@ export function SubscriptionForm({
                 type="date"
                 {...register("renewalDate")}
               />
+              <p className="text-xs text-muted-foreground">
+                Auto-calculated from start date &amp; billing cycle. You can override.
+              </p>
             </div>
 
             <div className="space-y-2">
