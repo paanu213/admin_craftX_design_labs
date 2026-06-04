@@ -65,9 +65,6 @@ export function SubscriptionForm({
           currency: subscription.currency as SubscriptionFormData["currency"],
           billingCycle: subscription.billingCycle,
           startDate: format(new Date(subscription.startDate), "yyyy-MM-dd"),
-          endDate: subscription.endDate
-            ? format(new Date(subscription.endDate), "yyyy-MM-dd")
-            : "",
           renewalDate: subscription.renewalDate
             ? format(new Date(subscription.renewalDate), "yyyy-MM-dd")
             : "",
@@ -207,14 +204,6 @@ export function SubscriptionForm({
               </p>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="endDate">End Date</Label>
-              <Input
-                id="endDate"
-                type="date"
-                {...register("endDate")}
-              />
-            </div>
           </CardContent>
         </Card>
 
