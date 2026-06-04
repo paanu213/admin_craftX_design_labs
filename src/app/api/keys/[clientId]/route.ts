@@ -48,10 +48,16 @@ export async function DELETE(
     const existing = await db.activationKey.findUnique({ where: { clientId } });
     if (!existing) return NextResponse.json({ error: "No key found" }, { status: 404 });
 
-    await db.activationKey.update({
-      where: { clientId },
-      data: { status: "REVOKED" },
-    });
+    await db.$transaction([
+      db.activationKey.update({
+        where: { clientId },
+        data: { status: "REVOKED" },
+      }),
+      db.client.update({
+        where: { id: clientId },
+        data: { status: "REGISTERED" },
+      }),
+    ]);
 
     return NextResponse.json({ message: "Key revoked" });
   } catch (error) {
