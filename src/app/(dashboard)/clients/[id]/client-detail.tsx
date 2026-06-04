@@ -142,6 +142,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     if (res.ok) {
       toast.success("Activation key generated");
       queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
     } else {
       const err = await res.json().catch(() => ({}));
       toast.error(err.error ?? "Failed to generate key");
@@ -156,6 +157,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     if (res.ok) {
       toast.success("Key revoked");
       queryClient.invalidateQueries({ queryKey: ["client", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
     } else {
       toast.error("Failed to revoke key");
     }
