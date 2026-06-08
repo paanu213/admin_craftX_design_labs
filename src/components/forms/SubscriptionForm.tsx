@@ -2,6 +2,7 @@
 
 import { useEffect } from "react";
 import { useForm } from "react-hook-form";
+import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -21,7 +22,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PageHeader } from "@/components/layout/PageWrapper";
-import type { Subscription } from "@/types";
+import type { Subscription, Application } from "@/types";
 import { format, addMonths, addYears, subDays } from "date-fns";
 
 function computeRenewalDate(startDate: string, billingCycle: string): string {
@@ -49,6 +50,12 @@ export function SubscriptionForm({
 }: SubscriptionFormProps) {
   const isEditing = !!subscription;
 
+  const { data: appsData } = useQuery<{ data: Application[] }>({
+    queryKey: ["applications-list"],
+    queryFn: () => fetch("/api/applications?status=ACTIVE").then((r) => r.json()),
+  });
+  const apps = appsData?.data ?? [];
+
   const {
     register,
     handleSubmit,
@@ -60,6 +67,7 @@ export function SubscriptionForm({
     resolver: zodResolver(subscriptionSchema) as any,
     defaultValues: subscription
       ? {
+          applicationId: (subscription as any).applicationId ?? null,
           planName: subscription.planName,
           price: Number(subscription.price),
           currency: subscription.currency as SubscriptionFormData["currency"],
@@ -72,6 +80,7 @@ export function SubscriptionForm({
           features: subscription.features,
         }
       : {
+          applicationId: null,
           currency: "INR",
           billingCycle: "MONTHLY",
           isAutoRenew: true,
@@ -81,12 +90,29 @@ export function SubscriptionForm({
 
   const watchedStartDate = watch("startDate");
   const watchedBillingCycle = watch("billingCycle");
+  const watchedAppId = watch("applicationId");
 
+  // Auto-calculate renewal date
   useEffect(() => {
     if (!watchedStartDate) return;
     const renewal = computeRenewalDate(watchedStartDate, watchedBillingCycle ?? "MONTHLY");
     if (renewal) setValue("renewalDate", renewal);
   }, [watchedStartDate, watchedBillingCycle, setValue]);
+
+  // Auto-fill price when app or billing cycle changes
+  useEffect(() => {
+    if (!watchedAppId) return;
+    const app = apps.find((a) => a.id === watchedAppId);
+    if (!app) return;
+    const cycle = watchedBillingCycle ?? "MONTHLY";
+    if (cycle === "ANNUALLY" && app.yearlyPrice != null) {
+      setValue("price", app.yearlyPrice);
+      if (app.currency) setValue("currency", app.currency as SubscriptionFormData["currency"]);
+    } else if (app.monthlyPrice != null) {
+      setValue("price", app.monthlyPrice);
+      if (app.currency) setValue("currency", app.currency as SubscriptionFormData["currency"]);
+    }
+  }, [watchedAppId, watchedBillingCycle, apps, setValue]);
 
   async function onSubmit(data: SubscriptionFormData) {
     const res = await fetch(`/api/clients/${clientId}/subscription`, {
@@ -104,11 +130,11 @@ export function SubscriptionForm({
     onSuccess();
   }
 
+  const selectedApp = apps.find((a) => a.id === watchedAppId);
+
   return (
     <div className="space-y-6 max-w-2xl">
-      <PageHeader
-        title={isEditing ? "Edit Subscription" : "Add Subscription"}
-      />
+      <PageHeader title={isEditing ? "Edit Subscription" : "Add Subscription"} />
 
       {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
       <form onSubmit={(handleSubmit as any)(onSubmit)} className="space-y-6">
@@ -117,6 +143,40 @@ export function SubscriptionForm({
             <CardTitle className="text-base">Subscription Details</CardTitle>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
+
+            {/* Application selector */}
+            <div className="space-y-2 sm:col-span-2">
+              <Label>Application</Label>
+              <Select
+                defaultValue={(subscription as any)?.applicationId ?? "none"}
+                onValueChange={(v) => setValue("applicationId", v === "none" ? null : v)}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select application (optional)" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No specific application</SelectItem>
+                  {apps.map((app) => (
+                    <SelectItem key={app.id} value={app.id}>
+                      {app.name} — v{app.version}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {selectedApp && (
+                <p className="text-xs text-muted-foreground">
+                  {selectedApp.monthlyPrice != null && (
+                    <span>Monthly: ₹{selectedApp.monthlyPrice}</span>
+                  )}
+                  {selectedApp.monthlyPrice != null && selectedApp.yearlyPrice != null && " · "}
+                  {selectedApp.yearlyPrice != null && (
+                    <span>Yearly: ₹{selectedApp.yearlyPrice}</span>
+                  )}
+                  {" — price auto-filled based on billing cycle"}
+                </p>
+              )}
+            </div>
+
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="planName">Plan Name *</Label>
               <Input
@@ -127,38 +187,6 @@ export function SubscriptionForm({
               {errors.planName && (
                 <p className="text-xs text-destructive">{errors.planName.message}</p>
               )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="price">Price *</Label>
-              <Input
-                id="price"
-                type="number"
-                step="0.01"
-                placeholder="99.00"
-                {...register("price", { valueAsNumber: true })}
-              />
-              {errors.price && (
-                <p className="text-xs text-destructive">{errors.price.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select
-                defaultValue="INR"
-                onValueChange={(v) => setValue("currency", v as SubscriptionFormData["currency"])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INR">INR (₹)</SelectItem>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
 
             <div className="space-y-2">
@@ -181,12 +209,40 @@ export function SubscriptionForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="startDate">Start Date *</Label>
+              <Label htmlFor="price">Price *</Label>
               <Input
-                id="startDate"
-                type="date"
-                {...register("startDate")}
+                id="price"
+                type="number"
+                step="0.01"
+                placeholder="0.00"
+                {...register("price", { valueAsNumber: true })}
               />
+              {errors.price && (
+                <p className="text-xs text-destructive">{errors.price.message}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="currency">Currency</Label>
+              <Select
+                defaultValue={subscription?.currency ?? "INR"}
+                onValueChange={(v) => setValue("currency", v as SubscriptionFormData["currency"])}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="INR">INR (₹)</SelectItem>
+                  <SelectItem value="USD">USD ($)</SelectItem>
+                  <SelectItem value="EUR">EUR (€)</SelectItem>
+                  <SelectItem value="GBP">GBP (£)</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="startDate">Start Date *</Label>
+              <Input id="startDate" type="date" {...register("startDate")} />
               {errors.startDate && (
                 <p className="text-xs text-destructive">{errors.startDate.message}</p>
               )}
@@ -194,13 +250,9 @@ export function SubscriptionForm({
 
             <div className="space-y-2">
               <Label htmlFor="renewalDate">Renewal Date</Label>
-              <Input
-                id="renewalDate"
-                type="date"
-                {...register("renewalDate")}
-              />
+              <Input id="renewalDate" type="date" {...register("renewalDate")} />
               <p className="text-xs text-muted-foreground">
-                Auto-calculated from start date &amp; billing cycle. You can override.
+                Auto-calculated from start date &amp; billing cycle.
               </p>
             </div>
 

@@ -63,6 +63,7 @@ export const clientSchema = z.object({
 });
 
 export const subscriptionSchema = z.object({
+  applicationId: z.string().optional().nullable(),
   planName: z.string().min(1, "Plan name is required"),
   price: z.number().min(0, "Price cannot be negative"),
   currency: z.enum(SUPPORTED_CURRENCIES).default("INR"),

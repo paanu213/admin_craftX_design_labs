@@ -32,6 +32,7 @@ export async function POST(
     }
 
     const {
+      applicationId,
       planName,
       price,
       currency,
@@ -47,6 +48,7 @@ export async function POST(
       where: { clientId },
       create: {
         clientId,
+        applicationId: applicationId ?? null,
         planName,
         price,
         currency: currency ?? "INR",
@@ -58,6 +60,7 @@ export async function POST(
         features: features ?? [],
       },
       update: {
+        applicationId: applicationId ?? null,
         planName,
         price,
         currency: currency ?? "INR",
