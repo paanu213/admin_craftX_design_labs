@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validations/client.schema";
+import { z } from "zod";
 
 const ALLOWED_EDIT_ROLES = ["SUPER_ADMIN", "CEO", "CMO"];
 const ALLOWED_DELETE_ROLES = ["SUPER_ADMIN", "CEO"];
@@ -128,6 +129,44 @@ export async function PUT(
     return NextResponse.json(updated);
   } catch (error) {
     console.error("[PUT /api/clients/[id]]", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
+// PATCH — status-only update (e.g. deactivate from the list)
+const patchSchema = z.object({
+  status: z.enum(["REGISTERED", "KEY_GENERATED", "ACTIVE", "INACTIVE", "TRIAL", "CHURNED"]),
+});
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const session = await auth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    if (!ALLOWED_EDIT_ROLES.includes(session.user.role)) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    const { id } = await params;
+    const body = await request.json();
+    const result = patchSchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json({ error: "Invalid status" }, { status: 400 });
+    }
+
+    const existing = await db.client.findUnique({ where: { id } });
+    if (!existing) return NextResponse.json({ error: "Client not found" }, { status: 404 });
+
+    const updated = await db.client.update({
+      where: { id },
+      data: { status: result.data.status },
+    });
+
+    return NextResponse.json(updated);
+  } catch (error) {
+    console.error("[PATCH /api/clients/[id]]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

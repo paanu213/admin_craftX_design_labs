@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, Eye, Edit, Trash2, MoreVertical, PowerOff } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   formatCurrency,
   formatDate,
@@ -54,14 +61,29 @@ export function ClientsContent() {
     },
   });
 
-  async function handleDelete(id: string, name: string) {
-    if (!confirm(`Delete client "${name}"? This cannot be undone.`)) return;
+  async function handleDelete(id: string, company: string) {
+    if (!confirm(`Delete client "${company}"? This cannot be undone.`)) return;
     const res = await fetch(`/api/clients/${id}`, { method: "DELETE" });
     if (res.ok) {
       toast.success("Client deleted");
       refetch();
     } else {
       toast.error("Failed to delete client");
+    }
+  }
+
+  async function handleDeactivate(id: string, company: string) {
+    if (!confirm(`Deactivate "${company}"? Their access will be suspended.`)) return;
+    const res = await fetch(`/api/clients/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "INACTIVE" }),
+    });
+    if (res.ok) {
+      toast.success("Client deactivated");
+      refetch();
+    } else {
+      toast.error("Failed to deactivate client");
     }
   }
 
@@ -123,7 +145,7 @@ export function ClientsContent() {
           {isLoading ? (
             <div className="p-4 space-y-3">
               {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-14" />
+                <Skeleton key={i} className="h-16" />
               ))}
             </div>
           ) : !data?.data?.length ? (
@@ -146,9 +168,6 @@ export function ClientsContent() {
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Client
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
                       Company
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
@@ -158,7 +177,7 @@ export function ClientsContent() {
                       Subscription
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Joined
+                      Registered
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       Actions
@@ -166,87 +185,119 @@ export function ClientsContent() {
                   </tr>
                 </thead>
                 <tbody>
-                  {data.data.map((client) => (
-                    <tr
-                      key={client.id}
-                      className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
-                    >
-                      <td className="px-4 py-3">
-                        <div>
-                          <p className="font-medium text-foreground">{client.name}</p>
-                          <p className="text-xs text-muted-foreground">{client.email}</p>
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 hidden md:table-cell text-muted-foreground">
-                        {client.company}
-                      </td>
-                      <td className="px-4 py-3">
-                        <Badge variant={CLIENT_STATUS_VARIANT[client.status] ?? "secondary"}>
-                          {CLIENT_STATUS_LABELS[client.status]}
-                        </Badge>
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell">
-                        {client.subscription ? (
-                          <div>
-                            <p className="font-medium">{client.subscription.planName}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {formatCurrency(
-                                Number(client.subscription.price),
-                                client.subscription.currency
-                              )}{" "}
-                              /{" "}
-                              {BILLING_CYCLE_LABELS[
-                                client.subscription.billingCycle
-                              ]?.toLowerCase()}
-                            </p>
+                  {data.data.map((client) => {
+                    const location = [client.city, client.state]
+                      .filter(Boolean)
+                      .join(", ");
+                    return (
+                      <tr
+                        key={client.id}
+                        className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
+                      >
+                        {/* Company — highlighted; contact name + location as secondary */}
+                        <td className="px-4 py-3">
+                          <p className="font-semibold text-foreground">{client.company}</p>
+                          <p className="text-xs text-muted-foreground">{client.name}</p>
+                          {location && (
+                            <p className="text-xs text-muted-foreground">{location}</p>
+                          )}
+                        </td>
+
+                        {/* Status */}
+                        <td className="px-4 py-3">
+                          <Badge variant={CLIENT_STATUS_VARIANT[client.status] ?? "secondary"}>
+                            {CLIENT_STATUS_LABELS[client.status]}
+                          </Badge>
+                        </td>
+
+                        {/* Subscription */}
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          {client.subscription ? (
+                            <div>
+                              <p className="font-medium">{client.subscription.planName}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatCurrency(
+                                  Number(client.subscription.price),
+                                  client.subscription.currency
+                                )}{" "}
+                                /{" "}
+                                {BILLING_CYCLE_LABELS[
+                                  client.subscription.billingCycle
+                                ]?.toLowerCase()}
+                              </p>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground text-xs">No plan</span>
+                          )}
+                        </td>
+
+                        {/* Registered date */}
+                        <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
+                          {formatDate(client.createdAt)}
+                        </td>
+
+                        {/* Actions */}
+                        <td className="px-4 py-3">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-8 gap-1.5 text-xs"
+                              onClick={() => router.push(`/clients/${client.id}`)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                              View
+                            </Button>
+
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-8 w-8">
+                                  <MoreVertical className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <RoleGuard permission="editClients">
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      router.push(`/clients/${client.id}?edit=true`)
+                                    }
+                                  >
+                                    <Edit className="h-4 w-4 mr-2" />
+                                    Edit
+                                  </DropdownMenuItem>
+                                </RoleGuard>
+
+                                <RoleGuard permission="editClients">
+                                  <DropdownMenuItem
+                                    disabled={client.status === "INACTIVE"}
+                                    onClick={() =>
+                                      handleDeactivate(client.id, client.company)
+                                    }
+                                  >
+                                    <PowerOff className="h-4 w-4 mr-2" />
+                                    Deactivate
+                                  </DropdownMenuItem>
+                                </RoleGuard>
+
+                                <RoleGuard permission="deleteClients">
+                                  <DropdownMenuSeparator />
+                                  <DropdownMenuItem
+                                    className="text-destructive focus:text-destructive"
+                                    onClick={() =>
+                                      handleDelete(client.id, client.company)
+                                    }
+                                  >
+                                    <Trash2 className="h-4 w-4 mr-2" />
+                                    Delete
+                                  </DropdownMenuItem>
+                                </RoleGuard>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
                           </div>
-                        ) : (
-                          <span className="text-muted-foreground text-xs">
-                            No plan
-                          </span>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
-                        {formatDate(client.createdAt)}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
-                            onClick={() => router.push(`/clients/${client.id}`)}
-                          >
-                            <Eye className="h-4 w-4" />
-                          </Button>
-                          <RoleGuard permission="editClients">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() =>
-                                router.push(`/clients/${client.id}?edit=true`)
-                              }
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </RoleGuard>
-                          <RoleGuard permission="deleteClients">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDelete(client.id, client.name)
-                              }
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </RoleGuard>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
