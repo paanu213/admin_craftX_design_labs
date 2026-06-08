@@ -85,26 +85,26 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
     },
   });
 
-  async function handleApprove(id: string, status: "APPROVED" | "REJECTED") {
-    let rejectionNote: string | undefined;
+  async function handleApprove(id: string, decision: "APPROVED" | "REJECTED") {
+    let note: string | undefined;
 
-    if (status === "REJECTED") {
-      const note = prompt("Reason for rejection (required):");
-      if (!note?.trim()) {
+    if (decision === "REJECTED") {
+      const input = prompt("Reason for rejection (required):");
+      if (!input?.trim()) {
         toast.error("A rejection reason is required");
         return;
       }
-      rejectionNote = note.trim();
+      note = input.trim();
     }
 
     const res = await fetch(`/api/expenses/${id}/approve`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status, ...(rejectionNote && { rejectionNote }) }),
+      body: JSON.stringify({ decision, ...(note && { note }) }),
     });
 
     if (res.ok) {
-      toast.success(status === "APPROVED" ? "Expense approved" : "Expense rejected");
+      toast.success(decision === "APPROVED" ? "Expense approved" : "Expense rejected");
       refetch();
     } else {
       const err = await res.json().catch(() => ({}));
@@ -317,9 +317,17 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                         {formatCurrency(Number(expense.amount), expense.currency)}
                       </td>
                       <td className="px-4 py-3">
-                        <Badge variant={STATUS_VARIANT[expense.status]}>
-                          {EXPENSE_STATUS_LABELS[expense.status]}
-                        </Badge>
+                        <div className="flex flex-col gap-0.5">
+                          <Badge variant={STATUS_VARIANT[expense.status]}>
+                            {EXPENSE_STATUS_LABELS[expense.status]}
+                          </Badge>
+                          {expense.status === "PENDING" && expense.approvals && expense.approvals.length > 0 && (
+                            <span className="text-xs text-muted-foreground">
+                              {expense.approvals.filter((a) => a.status === "APPROVED").length}/
+                              {expense.approvals.length} approved
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
                         {expense.createdBy?.name}
@@ -333,9 +341,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                             variant="ghost"
                             size="icon"
                             className="h-8 w-8"
-                            onClick={() =>
-                              router.push(`/expenses/${expense.id}`)
-                            }
+                            onClick={() => router.push(`/expenses/${expense.id}`)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
@@ -346,9 +352,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
-                                  onClick={() =>
-                                    handleApprove(expense.id, "APPROVED")
-                                  }
+                                  onClick={() => handleApprove(expense.id, "APPROVED")}
                                 >
                                   <CheckCircle className="h-4 w-4" />
                                 </Button>
@@ -356,9 +360,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                                   variant="ghost"
                                   size="icon"
                                   className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() =>
-                                    handleApprove(expense.id, "REJECTED")
-                                  }
+                                  onClick={() => handleApprove(expense.id, "REJECTED")}
                                 >
                                   <XCircle className="h-4 w-4" />
                                 </Button>
@@ -370,9 +372,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                               variant="ghost"
                               size="icon"
                               className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() =>
-                                handleDelete(expense.id, expense.title)
-                              }
+                              onClick={() => handleDelete(expense.id, expense.title)}
                             >
                               <Trash2 className="h-4 w-4" />
                             </Button>

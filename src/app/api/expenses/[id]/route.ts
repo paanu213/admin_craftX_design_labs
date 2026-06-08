@@ -22,6 +22,10 @@ export async function GET(
       include: {
         createdBy: { select: { id: true, name: true, role: true } },
         approvedBy: { select: { id: true, name: true, role: true } },
+        approvals: {
+          include: { approver: { select: { id: true, name: true, role: true } } },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 
@@ -83,6 +87,10 @@ export async function PUT(
       include: {
         createdBy: { select: { id: true, name: true, role: true } },
         approvedBy: { select: { id: true, name: true, role: true } },
+        approvals: {
+          include: { approver: { select: { id: true, name: true, role: true } } },
+          orderBy: { createdAt: "asc" },
+        },
       },
     });
 

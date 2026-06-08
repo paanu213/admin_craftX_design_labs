@@ -5,6 +5,7 @@ import { expenseSchema } from "@/lib/validations/expense.schema";
 import type { ExpenseStatus, ExpenseCategory } from "@/generated/prisma/enums";
 
 const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+const FOUNDER_ROLES = ["CEO", "CTO", "CFO", "COO", "CMO"];
 
 export async function GET(request: NextRequest) {
   try {
@@ -51,6 +52,9 @@ export async function GET(request: NextRequest) {
         include: {
           createdBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
+          approvals: {
+            include: { approver: { select: { id: true, name: true, role: true } } },
+          },
         },
       }),
       db.expense.count({ where }),
@@ -95,6 +99,15 @@ export async function POST(request: NextRequest) {
 
     const data = result.data;
 
+    const founders = await db.user.findMany({
+      where: {
+        role: { in: FOUNDER_ROLES as any },
+        isActive: true,
+        NOT: { id: session.user.id },
+      },
+      select: { id: true },
+    });
+
     const expense = await db.expense.create({
       data: {
         title: data.title,
@@ -110,8 +123,20 @@ export async function POST(request: NextRequest) {
       include: {
         createdBy: { select: { id: true, name: true, role: true } },
         approvedBy: { select: { id: true, name: true, role: true } },
+        approvals: {
+          include: { approver: { select: { id: true, name: true, role: true } } },
+        },
       },
     });
+
+    if (founders.length > 0) {
+      await db.expenseApproval.createMany({
+        data: founders.map((f) => ({
+          expenseId: expense.id,
+          approverId: f.id,
+        })),
+      });
+    }
 
     return NextResponse.json(
       { ...expense, amount: Number(expense.amount) },
