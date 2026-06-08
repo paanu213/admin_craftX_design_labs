@@ -14,44 +14,28 @@
  *
  * Entropy:   32^20 = 2^100 ≈ 1.27 × 10^30 possible keys
  *
- * Collision odds:
- *   With 1,000,000 keys in the system:
- *   P(any collision) ≈ (10^6)² / (2 × 2^100) ≈ 4 × 10^−22
- *   → You would need to generate more keys than atoms in the solar
- *     system before a single collision becomes likely.
- *
- * Uniqueness:  DB UNIQUE constraint is the hard guarantee.
- *              The retry loop is a belt-and-suspenders fallback that
- *              will never trigger in practice.
- *
  * Format:  CX-XXXXX-XXXXX-XXXXX-XXXXX
- *   - CX prefix identifies CraftX keys
- *   - Dashes are visual separators only (not part of entropy)
  * ────────────────────────────────────────────────────────────────────
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { randomBytes } from "crypto";
+import { addDays } from "date-fns";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
+import { generateKeySchema } from "@/lib/validations/payment.schema";
+import type { KeyType, PaymentMethod, PaymentReceiver } from "@/generated/prisma/enums";
 
 const GENERATE_ROLES = ["SUPER_ADMIN", "CEO"];
 
-// 32-char alphabet — no 0/O/1/I.  32 divides 256 exactly → zero modulo bias.
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
 function generateActivationKey(): string {
-  // Single CSPRNG call — 160 bits of raw OS entropy
   const raw = randomBytes(20);
   const chars = Array.from(raw, (byte) => CHARSET[byte % 32]).join("");
   return `CX-${chars.slice(0, 5)}-${chars.slice(5, 10)}-${chars.slice(10, 15)}-${chars.slice(15, 20)}`;
 }
 
-/**
- * Generates a key and confirms it doesn't already exist in the DB.
- * Retries up to 5 times — given 2^100 entropy this will never be needed
- * but protects against any future state we can't anticipate.
- */
 async function generateUniqueKey(): Promise<string> {
   for (let attempt = 1; attempt <= 5; attempt++) {
     const key = generateActivationKey();
@@ -59,10 +43,8 @@ async function generateUniqueKey(): Promise<string> {
     if (!existing) return key;
     console.warn(`[keys] Key collision on attempt ${attempt} — retrying`);
   }
-  throw new Error("Key generation failed after 5 attempts — this should never happen");
+  throw new Error("Key generation failed after 5 attempts");
 }
-
-// ─── GET: list all activation keys (any logged-in org user) ───────────────────
 
 export async function GET() {
   try {
@@ -84,8 +66,6 @@ export async function GET() {
   }
 }
 
-// ─── POST: generate activation key (CEO / SUPER_ADMIN only) ──────────────────
-
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -98,8 +78,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { clientId } = await request.json();
-    if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+    const body = await request.json();
+    const result = generateKeySchema.safeParse(body);
+    if (!result.success) {
+      return NextResponse.json(
+        { error: "Validation failed", fields: result.error.flatten().fieldErrors },
+        { status: 400 }
+      );
+    }
+
+    const { clientId, keyType, payment } = result.data;
 
     const client = await db.client.findUnique({
       where: { id: clientId },
@@ -107,16 +95,27 @@ export async function POST(request: NextRequest) {
     });
     if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
-    if (!client.subscription) {
+    if (keyType === "SUBSCRIPTION" && !client.subscription) {
       return NextResponse.json(
-        { error: "Add a subscription plan to this client before generating a key" },
+        { error: "Add a subscription plan to this client before generating a subscription key" },
         { status: 400 }
       );
     }
 
+    // Calculate expiry
+    const now = new Date();
+    let expiresAt: Date | null = null;
+    if (keyType === "TRIAL") {
+      expiresAt = addDays(now, 15);
+    } else if (client.subscription?.renewalDate) {
+      expiresAt = new Date(client.subscription.renewalDate);
+    }
+
+    // New client status
+    const newClientStatus = keyType === "TRIAL" ? "TRIAL" : "KEY_GENERATED";
+
     const uniqueKey = await generateUniqueKey();
 
-    // Delete any previous key and update client status — all in one transaction
     await db.activationKey.deleteMany({ where: { clientId } });
 
     const [record] = await db.$transaction([
@@ -124,6 +123,8 @@ export async function POST(request: NextRequest) {
         data: {
           clientId,
           key: uniqueKey,
+          keyType: keyType as KeyType,
+          expiresAt,
           generatedById: session.user.id,
         },
         include: {
@@ -132,9 +133,30 @@ export async function POST(request: NextRequest) {
       }),
       db.client.update({
         where: { id: clientId },
-        data: { status: "KEY_GENERATED" },
+        data: { status: newClientStatus },
       }),
     ]);
+
+    // Record payment if provided (CEO/SUPER_ADMIN auto-approve own payment)
+    if (payment && keyType === "SUBSCRIPTION") {
+      await db.payment.create({
+        data: {
+          clientId,
+          subscriptionId: client.subscription?.id ?? null,
+          amount: payment.amount,
+          currency: payment.currency ?? "INR",
+          method: payment.method as PaymentMethod,
+          receivedBy: payment.receivedBy as PaymentReceiver,
+          paymentDate: new Date(payment.paymentDate),
+          note: payment.note ?? null,
+          isRenewal: payment.isRenewal ?? false,
+          status: "APPROVED",
+          recordedById: session.user.id,
+          approvedById: session.user.id,
+          approvedAt: now,
+        },
+      });
+    }
 
     return NextResponse.json(record, { status: 201 });
   } catch (error) {

@@ -61,6 +61,31 @@ enum KeyStatus {
   PENDING
   ACTIVE
   REVOKED
+  EXPIRED
+}
+
+enum KeyType {
+  TRIAL
+  SUBSCRIPTION
+}
+
+enum PaymentMethod {
+  CASH
+  UPI
+  CARD
+  BANK_TRANSFER
+}
+
+enum PaymentReceiver {
+  EMPLOYEE
+  COMPANY
+}
+
+enum PaymentStatus {
+  PENDING_DEPOSIT
+  PENDING_APPROVAL
+  APPROVED
+  REJECTED
 }
 
 enum AppCategory {
@@ -107,6 +132,8 @@ model User {
   keysGenerated       ActivationKey[] @relation("KeyGeneratedBy")
   expenseApprovals    ExpenseApproval[] @relation("ExpenseApprovals")
   applicationsCreated Application[]   @relation("AppCreatedBy")
+  paymentsRecorded    Payment[]       @relation("PaymentRecordedBy")
+  paymentsApproved    Payment[]       @relation("PaymentApprovedBy")
 
   @@map("users")
 }
@@ -143,6 +170,7 @@ model Client {
   contacts      Contact[]
   subscription  Subscription?
   activationKey ActivationKey?
+  payments      Payment[]
 
   @@map("clients")
 }
@@ -181,6 +209,7 @@ model Subscription {
 
   client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
   application Application? @relation(fields: [applicationId], references: [id])
+  payments    Payment[]
 
   @@map("subscriptions")
 }
@@ -190,9 +219,11 @@ model ActivationKey {
   clientId      String    @unique
   key           String    @unique
   status        KeyStatus @default(PENDING)
+  keyType       KeyType   @default(SUBSCRIPTION)
   generatedById String
   generatedAt   DateTime  @default(now())
   activatedAt   DateTime?
+  expiresAt     DateTime?
 
   client      Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
   generatedBy User   @relation("KeyGeneratedBy", fields: [generatedById], references: [id])
@@ -270,4 +301,35 @@ model Application {
   subscriptions Subscription[]
 
   @@map("applications")
+}
+
+// ─────────────────────────────────────────────
+// Payment
+// ─────────────────────────────────────────────
+
+model Payment {
+  id             String          @id @default(cuid())
+  clientId       String
+  subscriptionId String?
+  amount         Decimal         @db.Decimal(10, 2)
+  currency       String          @default("INR")
+  method         PaymentMethod
+  receivedBy     PaymentReceiver
+  paymentDate    DateTime
+  note           String?
+  status         PaymentStatus   @default(PENDING_DEPOSIT)
+  isRenewal      Boolean         @default(false)
+  recordedById   String
+  approvedById   String?
+  approvedAt     DateTime?
+  rejectionNote  String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  recordedBy   User          @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
+  approvedBy   User?         @relation("PaymentApprovedBy", fields: [approvedById], references: [id])
+
+  @@map("payments")
 }

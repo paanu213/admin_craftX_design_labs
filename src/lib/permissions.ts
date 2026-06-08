@@ -33,6 +33,11 @@ export const PERMISSIONS = {
   editApplications: ["SUPER_ADMIN", "CEO", "CMO"] as UserRole[],
   deleteApplications: ["SUPER_ADMIN", "CEO"] as UserRole[],
 
+  // Payments
+  viewPayments: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  recordPayments: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  approvePayments: ["SUPER_ADMIN", "CEO"] as UserRole[],
+
   // Settings
   viewSettings: ["SUPER_ADMIN"] as UserRole[],
 } as const;

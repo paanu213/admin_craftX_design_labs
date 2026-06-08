@@ -116,3 +116,34 @@ export const APP_STATUS_VARIANT: Record<string, "success" | "info" | "warning" |
   MAINTENANCE: "warning",
   DEPRECATED: "destructive",
 };
+
+export const PAYMENT_METHOD_LABELS: Record<string, string> = {
+  CASH: "Cash",
+  UPI: "UPI",
+  CARD: "Card",
+  BANK_TRANSFER: "Bank Transfer",
+};
+
+export const PAYMENT_RECEIVER_LABELS: Record<string, string> = {
+  EMPLOYEE: "Employee",
+  COMPANY: "Company Account",
+};
+
+export const PAYMENT_STATUS_LABELS: Record<string, string> = {
+  PENDING_DEPOSIT: "Pending Deposit",
+  PENDING_APPROVAL: "Pending Approval",
+  APPROVED: "Approved",
+  REJECTED: "Rejected",
+};
+
+export const PAYMENT_STATUS_VARIANT: Record<string, "warning" | "info" | "success" | "destructive"> = {
+  PENDING_DEPOSIT: "warning",
+  PENDING_APPROVAL: "info",
+  APPROVED: "success",
+  REJECTED: "destructive",
+};
+
+export const KEY_TYPE_LABELS: Record<string, string> = {
+  TRIAL: "Trial",
+  SUBSCRIPTION: "Subscription",
+};
