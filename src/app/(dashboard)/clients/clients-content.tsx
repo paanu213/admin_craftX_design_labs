@@ -31,11 +31,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  formatCurrency,
   formatDate,
   CLIENT_STATUS_LABELS,
   CLIENT_STATUS_VARIANT,
-  BILLING_CYCLE_LABELS,
 } from "@/lib/utils";
 import type { ClientWithRelations } from "@/types";
 
@@ -245,14 +243,17 @@ export function ClientsContent() {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       Company
                     </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Status
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
+                      Client &amp; Mobile
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Subscription
+                      Location
                     </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
                       Registered
+                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Status
                     </th>
                     <th className="px-4 py-3 text-right font-medium text-muted-foreground">
                       Actions
@@ -267,16 +268,27 @@ export function ClientsContent() {
                         key={client.id}
                         className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                       >
-                        {/* Company — primary; name, phone, location secondary */}
+                          {/* Company */}
                         <td className="px-4 py-3">
                           <p className="font-semibold text-foreground">{client.company}</p>
-                          <p className="text-xs text-muted-foreground">{client.name}</p>
+                        </td>
+
+                        {/* Client name + mobile */}
+                        <td className="px-4 py-3 hidden md:table-cell">
+                          <p className="text-sm text-foreground">{client.name}</p>
                           {client.phone && (
                             <p className="text-xs text-muted-foreground">{client.phone}</p>
                           )}
-                          {location && (
-                            <p className="text-xs text-muted-foreground">{location}</p>
-                          )}
+                        </td>
+
+                        {/* Location */}
+                        <td className="px-4 py-3 hidden lg:table-cell text-sm text-muted-foreground">
+                          {location || <span className="text-xs">—</span>}
+                        </td>
+
+                        {/* Registered date */}
+                        <td className="px-4 py-3 hidden lg:table-cell text-xs text-muted-foreground">
+                          {formatDate(client.createdAt)}
                         </td>
 
                         {/* Status */}
@@ -284,32 +296,6 @@ export function ClientsContent() {
                           <Badge variant={CLIENT_STATUS_VARIANT[client.status] ?? "secondary"}>
                             {CLIENT_STATUS_LABELS[client.status]}
                           </Badge>
-                        </td>
-
-                        {/* Subscription */}
-                        <td className="px-4 py-3 hidden lg:table-cell">
-                          {client.subscription ? (
-                            <div>
-                              <p className="font-medium">{client.subscription.planName}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {formatCurrency(
-                                  Number(client.subscription.price),
-                                  client.subscription.currency
-                                )}{" "}
-                                /{" "}
-                                {BILLING_CYCLE_LABELS[
-                                  client.subscription.billingCycle
-                                ]?.toLowerCase()}
-                              </p>
-                            </div>
-                          ) : (
-                            <span className="text-muted-foreground text-xs">No plan</span>
-                          )}
-                        </td>
-
-                        {/* Registered date */}
-                        <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground text-xs">
-                          {formatDate(client.createdAt)}
                         </td>
 
                         {/* Actions */}
