@@ -6,9 +6,11 @@ import type {
   ExpenseStatus,
   ExpenseApprovalStatus,
   KeyStatus,
+  AppCategory,
+  AppStatus,
 } from "@/generated/prisma/enums";
 
-export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus };
+export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus, AppCategory, AppStatus };
 
 export interface ActivationKey {
   id: string;
@@ -85,8 +87,32 @@ export interface Subscription {
   renewalDate: Date | null;
   isAutoRenew: boolean;
   features: string[];
+  applicationId?: string | null;
+  application?: Application | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface Application {
+  id: string;
+  name: string;
+  description: string | null;
+  category: AppCategory;
+  version: string;
+  status: AppStatus;
+  logoUrl: string | null;
+  monthlyPrice: number | null;
+  yearlyPrice: number | null;
+  currency: string;
+  website: string | null;
+  playStoreUrl: string | null;
+  appStoreUrl: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string; role: string };
+  _count?: { subscriptions: number };
+  activeSubscriptions?: number;
 }
 
 export interface ExpenseApproval {

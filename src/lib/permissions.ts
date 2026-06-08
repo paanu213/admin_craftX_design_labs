@@ -27,6 +27,12 @@ export const PERMISSIONS = {
   viewKey: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
   revokeKey: ["SUPER_ADMIN", "CEO"] as UserRole[],
 
+  // Application Management
+  viewApplications: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  createApplications: ["SUPER_ADMIN", "CEO", "CMO"] as UserRole[],
+  editApplications: ["SUPER_ADMIN", "CEO", "CMO"] as UserRole[],
+  deleteApplications: ["SUPER_ADMIN", "CEO"] as UserRole[],
+
   // Settings
   viewSettings: ["SUPER_ADMIN"] as UserRole[],
 } as const;

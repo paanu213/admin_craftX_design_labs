@@ -85,3 +85,34 @@ export const BILLING_CYCLE_LABELS: Record<string, string> = {
   QUARTERLY: "Quarterly",
   ANNUALLY: "Annually",
 };
+
+export const APP_CATEGORY_LABELS: Record<string, string> = {
+  BILLING: "Billing",
+  INVENTORY: "Inventory",
+  POS: "Point of Sale",
+  RESTAURANT: "Restaurant",
+  HOSPITAL: "Hospital",
+  SCHOOL: "School",
+  REAL_ESTATE: "Real Estate",
+  LOGISTICS: "Logistics",
+  CRM: "CRM",
+  HR_PAYROLL: "HR & Payroll",
+  FINANCE: "Finance",
+  MANUFACTURING: "Manufacturing",
+  E_COMMERCE: "E-Commerce",
+  OTHER: "Other",
+};
+
+export const APP_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  BETA: "Beta",
+  MAINTENANCE: "Maintenance",
+  DEPRECATED: "Deprecated",
+};
+
+export const APP_STATUS_VARIANT: Record<string, "success" | "info" | "warning" | "destructive"> = {
+  ACTIVE: "success",
+  BETA: "info",
+  MAINTENANCE: "warning",
+  DEPRECATED: "destructive",
+};
