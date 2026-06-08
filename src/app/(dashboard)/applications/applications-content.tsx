@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Search, Filter, Eye, Edit, Trash2 } from "lucide-react";
+import { Plus, Search, Filter, Eye, Edit, Trash2, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +12,13 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageWrapper";
 import { RoleGuard } from "@/components/guards/RoleGuard";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
@@ -189,7 +196,12 @@ export function ApplicationsContent() {
                       className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                     >
                       <td className="px-4 py-3">
-                        <p className="font-medium text-foreground">{app.name}</p>
+                        <button
+                          className="font-medium text-foreground hover:text-primary hover:underline text-left"
+                          onClick={() => router.push(`/applications/${app.id}`)}
+                        >
+                          {app.name}
+                        </button>
                         {app.description && (
                           <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                             {app.description}
@@ -232,32 +244,40 @@ export function ApplicationsContent() {
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
                             onClick={() => router.push(`/applications/${app.id}`)}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5" />
+                            View
                           </Button>
-                          <RoleGuard permission="editApplications">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8"
-                              onClick={() => router.push(`/applications/${app.id}/edit`)}
-                            >
-                              <Edit className="h-4 w-4" />
-                            </Button>
-                          </RoleGuard>
-                          <RoleGuard permission="deleteApplications">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(app.id, app.name)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </RoleGuard>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <RoleGuard permission="editApplications">
+                                <DropdownMenuItem
+                                  onClick={() => router.push(`/applications/${app.id}/edit`)}
+                                >
+                                  <Edit className="h-4 w-4 mr-2" />
+                                  Edit
+                                </DropdownMenuItem>
+                              </RoleGuard>
+                              <RoleGuard permission="deleteApplications">
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => handleDelete(app.id, app.name)}
+                                >
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </RoleGuard>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
