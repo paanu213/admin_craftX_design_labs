@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   Building2,
   X,
+  LayoutGrid,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
@@ -22,6 +23,7 @@ import { Separator } from "@/components/ui/separator";
 const navItems = [
   { label: "Dashboard", href: "/", icon: LayoutDashboard, permission: null },
   { label: "Clients", href: "/clients", icon: Users, permission: "viewClients" as const },
+  { label: "Applications", href: "/applications", icon: LayoutGrid, permission: "viewApplications" as const },
   { label: "Expenses", href: "/expenses", icon: Receipt, permission: "viewExpenses" as const },
   { label: "Reports", href: "/reports", icon: BarChart3, permission: "viewReports" as const },
 ];
