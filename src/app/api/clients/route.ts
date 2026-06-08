@@ -4,7 +4,19 @@ import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validations/client.schema";
 import type { ClientStatus } from "@/generated/prisma/enums";
 
-const ALLOWED_CREATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"];
+const ALLOWED_CREATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
+
+function periodFilter(period: string | null): { gte?: Date; lt?: Date } | undefined {
+  if (!period || period === "all") return undefined;
+  const now = new Date();
+  if (period === "this_month") return { gte: new Date(now.getFullYear(), now.getMonth(), 1) };
+  if (period === "last_month") return {
+    gte: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+    lt: new Date(now.getFullYear(), now.getMonth(), 1),
+  };
+  if (period === "yearly") return { gte: new Date(now.getFullYear(), 0, 1) };
+  return undefined;
+}
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,6 +30,8 @@ export async function GET(request: NextRequest) {
     const limit = Math.max(1, Number(searchParams.get("limit") ?? 10));
     const search = searchParams.get("search") ?? "";
     const status = searchParams.get("status") as ClientStatus | null;
+    const period = searchParams.get("period");
+    const dateRange = periodFilter(period);
 
     const where = {
       ...(search && {
@@ -28,6 +42,7 @@ export async function GET(request: NextRequest) {
         ],
       }),
       ...(status && { status }),
+      ...(dateRange && { createdAt: dateRange }),
     };
 
     const [clients, total] = await Promise.all([

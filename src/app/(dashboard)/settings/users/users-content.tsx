@@ -215,6 +215,7 @@ export function UsersContent() {
                   <SelectItem value="CMO">CMO</SelectItem>
                   <SelectItem value="CFO">CFO</SelectItem>
                   <SelectItem value="CTO">CTO</SelectItem>
+                  <SelectItem value="COO">COO</SelectItem>
                 </SelectContent>
               </Select>
             </div>

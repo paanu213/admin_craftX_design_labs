@@ -17,6 +17,7 @@ enum UserRole {
   CMO
   CFO
   CTO
+  COO
 }
 
 enum ClientStatus {

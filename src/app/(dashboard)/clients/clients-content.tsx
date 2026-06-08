@@ -3,7 +3,11 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { Plus, Search, Filter, Eye, Edit, Trash2, MoreVertical, PowerOff } from "lucide-react";
+import {
+  Plus, Search, Filter, Eye, Edit, Trash2,
+  MoreVertical, PowerOff, Users, CheckCircle,
+  Clock, KeyRound, UserX, TrendingDown,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -40,20 +44,51 @@ interface ClientsResponse {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
+interface StatsResponse {
+  total: number;
+  byStatus: Record<string, number>;
+}
+
+type Period = "all" | "this_month" | "last_month" | "yearly";
+
+const PERIOD_TABS: { value: Period; label: string }[] = [
+  { value: "all", label: "All Time" },
+  { value: "this_month", label: "This Month" },
+  { value: "last_month", label: "Last Month" },
+  { value: "yearly", label: "This Year" },
+];
+
+const STAT_CARDS = [
+  { status: "total",         label: "Total",         icon: Users,        iconClass: "text-blue-500"   },
+  { status: "ACTIVE",        label: "Active",         icon: CheckCircle,  iconClass: "text-emerald-500"},
+  { status: "TRIAL",         label: "Trial",          icon: Clock,        iconClass: "text-violet-500" },
+  { status: "KEY_GENERATED", label: "Key Generated",  icon: KeyRound,     iconClass: "text-amber-500"  },
+  { status: "REGISTERED",    label: "Registered",     icon: Users,        iconClass: "text-sky-500"    },
+  { status: "INACTIVE",      label: "Inactive",       icon: UserX,        iconClass: "text-orange-500" },
+  { status: "CHURNED",       label: "Churned",        icon: TrendingDown, iconClass: "text-rose-500"   },
+];
+
 export function ClientsContent() {
   const router = useRouter();
+  const [period, setPeriod] = useState<Period>("all");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
 
+  const { data: stats, isLoading: statsLoading } = useQuery<StatsResponse>({
+    queryKey: ["clients-stats", period],
+    queryFn: () => fetch(`/api/clients/stats?period=${period}`).then((r) => r.json()),
+  });
+
   const { data, isLoading, refetch } = useQuery<ClientsResponse>({
-    queryKey: ["clients", page, search, statusFilter],
+    queryKey: ["clients", page, search, statusFilter, period],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         limit: "10",
         ...(search && { search }),
         ...(statusFilter !== "ALL" && { status: statusFilter }),
+        ...(period !== "all" && { period }),
       });
       const res = await fetch(`/api/clients?${params}`);
       if (!res.ok) throw new Error("Failed to load clients");
@@ -87,6 +122,9 @@ export function ClientsContent() {
     }
   }
 
+  const statValue = (status: string) =>
+    status === "total" ? (stats?.total ?? 0) : (stats?.byStatus[status] ?? 0);
+
   return (
     <div className="space-y-4">
       <PageHeader
@@ -101,6 +139,43 @@ export function ClientsContent() {
           </RoleGuard>
         }
       />
+
+      {/* Period tabs */}
+      <div className="flex gap-1 border-b border-border">
+        {PERIOD_TABS.map((tab) => (
+          <button
+            key={tab.value}
+            onClick={() => {
+              setPeriod(tab.value);
+              setPage(1);
+            }}
+            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors -mb-px ${
+              period === tab.value
+                ? "border-primary text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground"
+            }`}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Stats cards */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        {STAT_CARDS.map(({ status, label, icon: Icon, iconClass }) => (
+          <Card key={status} className="p-3">
+            <div className="flex items-center gap-2 mb-1">
+              <Icon className={`h-3.5 w-3.5 ${iconClass}`} />
+              <span className="text-xs text-muted-foreground">{label}</span>
+            </div>
+            {statsLoading ? (
+              <Skeleton className="h-6 w-8" />
+            ) : (
+              <p className="text-xl font-bold text-foreground">{statValue(status)}</p>
+            )}
+          </Card>
+        ))}
+      </div>
 
       {/* Filters */}
       <div className="flex flex-col sm:flex-row gap-3">
@@ -186,18 +261,19 @@ export function ClientsContent() {
                 </thead>
                 <tbody>
                   {data.data.map((client) => {
-                    const location = [client.city, client.state]
-                      .filter(Boolean)
-                      .join(", ");
+                    const location = [client.city, client.state].filter(Boolean).join(", ");
                     return (
                       <tr
                         key={client.id}
                         className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                       >
-                        {/* Company — highlighted; contact name + location as secondary */}
+                        {/* Company — primary; name, phone, location secondary */}
                         <td className="px-4 py-3">
                           <p className="font-semibold text-foreground">{client.company}</p>
                           <p className="text-xs text-muted-foreground">{client.name}</p>
+                          {client.phone && (
+                            <p className="text-xs text-muted-foreground">{client.phone}</p>
+                          )}
                           {location && (
                             <p className="text-xs text-muted-foreground">{location}</p>
                           )}

@@ -9,7 +9,7 @@ const strongPassword = z
   .regex(/[0-9]/, "Must contain at least one number")
   .regex(/[^A-Za-z0-9]/, "Must contain at least one special character");
 
-export const USER_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as const;
+export const USER_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as const;
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),

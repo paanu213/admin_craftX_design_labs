@@ -43,6 +43,7 @@ export const ROLE_LABELS: Record<string, string> = {
   CMO: "CMO",
   CFO: "CFO",
   CTO: "CTO",
+  COO: "COO",
 };
 
 export const CLIENT_STATUS_LABELS: Record<string, string> = {

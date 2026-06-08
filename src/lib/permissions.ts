@@ -5,26 +5,26 @@ export const PERMISSIONS = {
   manageUsers: ["SUPER_ADMIN"] as UserRole[],
 
   // Client Management
-  viewClients: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  createClients: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  editClients: ["SUPER_ADMIN", "CEO", "CMO"] as UserRole[],
+  viewClients: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  createClients: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  editClients: ["SUPER_ADMIN", "CEO", "CMO", "COO"] as UserRole[],
   deleteClients: ["SUPER_ADMIN", "CEO"] as UserRole[],
 
   // Expense Management
-  viewExpenses: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  viewAllExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO"] as UserRole[],
-  createExpenses: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  editExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO"] as UserRole[],
-  deleteExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO"] as UserRole[],
+  viewExpenses: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  viewAllExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "COO"] as UserRole[],
+  createExpenses: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  editExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO", "COO"] as UserRole[],
+  deleteExpenses: ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO", "COO"] as UserRole[],
   approveExpenses: ["SUPER_ADMIN", "CEO"] as UserRole[],
 
   // Reports
-  viewReports: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
-  exportReports: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
+  viewReports: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
+  exportReports: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
 
   // Activation Keys
   generateKey: ["SUPER_ADMIN", "CEO"] as UserRole[],
-  viewKey: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO"] as UserRole[],
+  viewKey: ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[],
   revokeKey: ["SUPER_ADMIN", "CEO"] as UserRole[],
 
   // Settings
