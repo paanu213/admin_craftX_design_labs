@@ -31,6 +31,8 @@ const STATUS_VARIANT_MAP: Record<
   ClientStatus,
   "success" | "info" | "warning" | "destructive"
 > = {
+  REGISTERED: "info",
+  KEY_GENERATED: "info",
   ACTIVE: "success",
   TRIAL: "info",
   INACTIVE: "warning",

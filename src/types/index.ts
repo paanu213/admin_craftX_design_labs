@@ -4,10 +4,11 @@ import type {
   BillingCycle,
   ExpenseCategory,
   ExpenseStatus,
+  ExpenseApprovalStatus,
   KeyStatus,
 } from "@/generated/prisma/enums";
 
-export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, KeyStatus };
+export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus };
 
 export interface ActivationKey {
   id: string;
@@ -88,6 +89,17 @@ export interface Subscription {
   updatedAt: Date;
 }
 
+export interface ExpenseApproval {
+  id: string;
+  expenseId: string;
+  approverId: string;
+  status: "PENDING" | "APPROVED" | "REJECTED";
+  note: string | null;
+  decidedAt: string | null;
+  createdAt: string;
+  approver: { id: string; name: string; role: string };
+}
+
 export interface ExpenseWithRelations {
   id: string;
   title: string;
@@ -106,6 +118,7 @@ export interface ExpenseWithRelations {
   updatedAt: Date;
   createdBy: SafeUser;
   approvedBy: SafeUser | null;
+  approvals: ExpenseApproval[];
 }
 
 export type ApiResponse<T> =

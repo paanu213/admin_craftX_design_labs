@@ -17,9 +17,12 @@ enum UserRole {
   CMO
   CFO
   CTO
+  COO
 }
 
 enum ClientStatus {
+  REGISTERED
+  KEY_GENERATED
   ACTIVE
   INACTIVE
   TRIAL
@@ -43,6 +46,12 @@ enum ExpenseCategory {
 }
 
 enum ExpenseStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ExpenseApprovalStatus {
   PENDING
   APPROVED
   REJECTED
@@ -72,6 +81,7 @@ model User {
   expensesCreated  Expense[]       @relation("ExpenseCreatedBy")
   expensesApproved Expense[]       @relation("ExpenseApprovedBy")
   keysGenerated    ActivationKey[] @relation("KeyGeneratedBy")
+  expenseApprovals ExpenseApproval[] @relation("ExpenseApprovals")
 
   @@map("users")
 }
@@ -186,6 +196,23 @@ model Expense {
 
   createdBy  User  @relation("ExpenseCreatedBy", fields: [createdById], references: [id])
   approvedBy User? @relation("ExpenseApprovedBy", fields: [approvedById], references: [id])
+  approvals  ExpenseApproval[]
 
   @@map("expenses")
+}
+
+model ExpenseApproval {
+  id         String                @id @default(cuid())
+  expenseId  String
+  approverId String
+  status     ExpenseApprovalStatus @default(PENDING)
+  note       String?
+  decidedAt  DateTime?
+  createdAt  DateTime              @default(now())
+
+  expense  Expense @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  approver User    @relation("ExpenseApprovals", fields: [approverId], references: [id])
+
+  @@unique([expenseId, approverId])
+  @@map("expense_approvals")
 }

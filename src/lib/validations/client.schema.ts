@@ -58,13 +58,13 @@ export const clientSchema = z.object({
   addressLine1: z.string().optional(),
   addressLine2: z.string().optional(),
   appRequirements: z.array(z.string()),
-  status: z.enum(["ACTIVE", "INACTIVE", "TRIAL", "CHURNED"]),
+  status: z.enum(["REGISTERED", "KEY_GENERATED", "ACTIVE", "INACTIVE", "TRIAL", "CHURNED"]),
   notes: z.string().optional(),
 });
 
 export const subscriptionSchema = z.object({
   planName: z.string().min(1, "Plan name is required"),
-  price: z.number().positive("Price must be positive"),
+  price: z.number().min(0, "Price cannot be negative"),
   currency: z.enum(SUPPORTED_CURRENCIES).default("INR"),
   billingCycle: z.enum(["MONTHLY", "QUARTERLY", "ANNUALLY"]),
   startDate: z
