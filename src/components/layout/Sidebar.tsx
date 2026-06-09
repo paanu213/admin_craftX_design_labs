@@ -13,6 +13,8 @@ import {
   Building2,
   X,
   LayoutGrid,
+  Banknote,
+  Terminal,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
@@ -25,6 +27,8 @@ const navItems = [
   { label: "Clients", href: "/clients", icon: Users, permission: "viewClients" as const },
   { label: "Applications", href: "/applications", icon: LayoutGrid, permission: "viewApplications" as const },
   { label: "Expenses", href: "/expenses", icon: Receipt, permission: "viewExpenses" as const },
+  { label: "Payments", href: "/payments", icon: Banknote, permission: "viewPayments" as const },
+  { label: "Dev Access", href: "/dev-access", icon: Terminal, permission: "viewDevAccess" as const },
   { label: "Reports", href: "/reports", icon: BarChart3, permission: "viewReports" as const },
 ];
 

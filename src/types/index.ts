@@ -6,21 +6,50 @@ import type {
   ExpenseStatus,
   ExpenseApprovalStatus,
   KeyStatus,
+  KeyType,
   AppCategory,
   AppStatus,
+  PaymentMethod,
+  PaymentReceiver,
+  PaymentStatus,
 } from "@/generated/prisma/enums";
 
-export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus, AppCategory, AppStatus };
+export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus, KeyType, AppCategory, AppStatus, PaymentMethod, PaymentReceiver, PaymentStatus };
 
 export interface ActivationKey {
   id: string;
   clientId: string;
   key: string;
   status: KeyStatus;
+  keyType: KeyType;
   generatedById: string;
   generatedAt: Date;
   activatedAt: Date | null;
+  expiresAt: Date | null;
   generatedBy: { id: string; name: string; role: string };
+}
+
+export interface Payment {
+  id: string;
+  clientId: string;
+  subscriptionId: string | null;
+  amount: number;
+  currency: string;
+  method: PaymentMethod;
+  receivedBy: PaymentReceiver;
+  paymentDate: string;
+  note: string | null;
+  status: PaymentStatus;
+  isRenewal: boolean;
+  recordedById: string;
+  approvedById: string | null;
+  approvedAt: string | null;
+  rejectionNote: string | null;
+  createdAt: string;
+  updatedAt: string;
+  recordedBy: { id: string; name: string; role: string };
+  approvedBy: { id: string; name: string; role: string } | null;
+  client?: { id: string; name: string; company: string };
 }
 
 export interface SafeUser {
@@ -161,4 +190,17 @@ export interface PaginationMeta {
 export interface PaginatedResponse<T> {
   data: T[];
   meta: PaginationMeta;
+}
+
+export interface DevAccessPassword {
+  id: string;
+  clientId: string;
+  generatedById: string;
+  reason: string;
+  expiresAt: string;
+  usedAt: string | null;
+  usedFromIp: string | null;
+  createdAt: string;
+  generatedBy: { id: string; name: string; role: string };
+  client?: { id: string; name: string; company: string };
 }
