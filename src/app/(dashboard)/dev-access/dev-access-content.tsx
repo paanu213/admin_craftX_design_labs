@@ -44,6 +44,7 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
     data: passwords,
     isLoading,
     isError,
+    error: passwordsError,
     refetch,
   } = useQuery<DevAccessPassword[]>({
     queryKey: ["dev-passwords"],
@@ -161,7 +162,8 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <p className="text-destructive text-sm">Failed to load dev passwords. Please try again.</p>
+              <p className="text-destructive text-sm font-medium">Failed to load dev passwords</p>
+              <p className="text-destructive/70 text-xs max-w-md text-center font-mono">{String((passwordsError as Error)?.message ?? passwordsError)}</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
             </div>
           ) : !passwords?.length ? (
