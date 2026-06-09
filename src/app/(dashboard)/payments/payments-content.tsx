@@ -48,7 +48,7 @@ export function PaymentsContent() {
 
   const isCEO = ["CEO", "SUPER_ADMIN"].includes(session?.user?.role ?? "");
 
-  const { data: payments, isLoading, isError, error, refetch } = useQuery<Payment[]>({
+  const { data: payments, isLoading, isError, refetch } = useQuery<Payment[]>({
     queryKey: ["payments", statusFilter],
     queryFn: async () => {
       const params = new URLSearchParams();
@@ -157,8 +157,7 @@ export function PaymentsContent() {
             </div>
           ) : isError ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
-              <p className="text-destructive text-sm font-medium">Failed to load payments</p>
-              <p className="text-destructive/70 text-xs max-w-md text-center font-mono">{String((error as Error)?.message ?? error)}</p>
+              <p className="text-destructive text-sm">Failed to load payments. Please try again.</p>
               <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
             </div>
           ) : !payments?.length ? (

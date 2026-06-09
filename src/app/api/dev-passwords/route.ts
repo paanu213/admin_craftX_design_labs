@@ -53,7 +53,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(passwords);
   } catch (error) {
     console.error("[GET /api/dev-passwords]", error);
-    return NextResponse.json({ error: "Internal Server Error", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }
 
@@ -126,6 +126,6 @@ export async function POST(request: NextRequest) {
     );
   } catch (error) {
     console.error("[POST /api/dev-passwords]", error);
-    return NextResponse.json({ error: "Internal Server Error", detail: String(error) }, { status: 500 });
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
   }
 }

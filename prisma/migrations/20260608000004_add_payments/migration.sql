@@ -1,17 +1,17 @@
 -- Add EXPIRED to KeyStatus
 ALTER TYPE "KeyStatus" ADD VALUE IF NOT EXISTS 'EXPIRED';
 
--- New enums
+-- New enums (idempotent)
 DO $$ BEGIN CREATE TYPE "KeyType" AS ENUM ('TRIAL', 'SUBSCRIPTION'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "PaymentMethod" AS ENUM ('CASH', 'UPI', 'CARD', 'BANK_TRANSFER'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "PaymentReceiver" AS ENUM ('EMPLOYEE', 'COMPANY'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 DO $$ BEGIN CREATE TYPE "PaymentStatus" AS ENUM ('PENDING_DEPOSIT', 'PENDING_APPROVAL', 'APPROVED', 'REJECTED'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- Add keyType and expiresAt to activation_keys
+-- Add columns to activation_keys (idempotent)
 ALTER TABLE "activation_keys" ADD COLUMN IF NOT EXISTS "keyType" "KeyType" NOT NULL DEFAULT 'SUBSCRIPTION';
 ALTER TABLE "activation_keys" ADD COLUMN IF NOT EXISTS "expiresAt" TIMESTAMP(3);
 
--- Create payments table
+-- Create payments table (idempotent)
 CREATE TABLE IF NOT EXISTS "payments" (
     "id"             TEXT NOT NULL,
     "clientId"       TEXT NOT NULL,
@@ -33,14 +33,23 @@ CREATE TABLE IF NOT EXISTS "payments" (
     CONSTRAINT "payments_pkey" PRIMARY KEY ("id")
 );
 
-ALTER TABLE "payments" ADD CONSTRAINT "payments_clientId_fkey"
-    FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+-- FK constraints (idempotent — safe to re-run if already exists)
+DO $$ BEGIN
+    ALTER TABLE "payments" ADD CONSTRAINT "payments_clientId_fkey"
+        FOREIGN KEY ("clientId") REFERENCES "clients"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-ALTER TABLE "payments" ADD CONSTRAINT "payments_subscriptionId_fkey"
-    FOREIGN KEY ("subscriptionId") REFERENCES "subscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "payments" ADD CONSTRAINT "payments_subscriptionId_fkey"
+        FOREIGN KEY ("subscriptionId") REFERENCES "subscriptions"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-ALTER TABLE "payments" ADD CONSTRAINT "payments_recordedById_fkey"
-    FOREIGN KEY ("recordedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "payments" ADD CONSTRAINT "payments_recordedById_fkey"
+        FOREIGN KEY ("recordedById") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
-ALTER TABLE "payments" ADD CONSTRAINT "payments_approvedById_fkey"
-    FOREIGN KEY ("approvedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+DO $$ BEGIN
+    ALTER TABLE "payments" ADD CONSTRAINT "payments_approvedById_fkey"
+        FOREIGN KEY ("approvedById") REFERENCES "users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
