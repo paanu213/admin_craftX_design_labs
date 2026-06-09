@@ -1,7 +1,14 @@
+import { Header } from "@/components/layout/Header";
+import { PageWrapper } from "@/components/layout/PageWrapper";
 import { PaymentsContent } from "./payments-content";
 
-export const metadata = { title: "Payments" };
-
 export default function PaymentsPage() {
-  return <PaymentsContent />;
+  return (
+    <>
+      <Header title="Payments" />
+      <PageWrapper>
+        <PaymentsContent />
+      </PageWrapper>
+    </>
+  );
 }
