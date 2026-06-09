@@ -48,12 +48,15 @@ export function PaymentsContent() {
 
   const isCEO = ["CEO", "SUPER_ADMIN"].includes(session?.user?.role ?? "");
 
-  const { data: payments, isLoading, refetch } = useQuery<Payment[]>({
+  const { data: payments, isLoading, isError, refetch } = useQuery<Payment[]>({
     queryKey: ["payments", statusFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams();
       if (statusFilter !== "ALL") params.set("status", statusFilter);
-      return fetch(`/api/payments?${params}`).then((r) => r.json());
+      const res = await fetch(`/api/payments?${params}`);
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to load payments");
+      return Array.isArray(json) ? json : [];
     },
   });
 
@@ -151,6 +154,11 @@ export function PaymentsContent() {
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-16" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <p className="text-destructive text-sm">Failed to load payments. Please try again.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
             </div>
           ) : !payments?.length ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">

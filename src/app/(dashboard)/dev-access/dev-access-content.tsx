@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { Plus, Terminal, Save } from "lucide-react";
@@ -36,16 +36,23 @@ interface DevAccessContentProps {
 export function DevAccessContent({ userRole }: DevAccessContentProps) {
   const isFounder = FOUNDER_ROLES.includes(userRole);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [expiryHours, setExpiryHours] = useState<string>("");
+  const [expiryHours, setExpiryHours] = useState<string>("2");
+  const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
 
   const {
     data: passwords,
     isLoading,
+    isError,
     refetch,
   } = useQuery<DevAccessPassword[]>({
     queryKey: ["dev-passwords"],
-    queryFn: () => fetch("/api/dev-passwords").then((r) => r.json()),
+    queryFn: async () => {
+      const res = await fetch("/api/dev-passwords");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to load passwords");
+      return Array.isArray(json) ? json : [];
+    },
   });
 
   const { data: settings, refetch: refetchSettings } = useQuery<Record<string, string>>({
@@ -54,12 +61,16 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
     enabled: isFounder,
   });
 
-  // Set initial value from settings once loaded
-  const settingsExpiry = (settings as Record<string, string> | undefined)?.DEV_PASSWORD_EXPIRY_HOURS;
-  const currentExpiry = expiryHours || settingsExpiry || "2";
+  // Initialize expiry input from settings once loaded (don't override if user has typed)
+  useEffect(() => {
+    if (settings?.DEV_PASSWORD_EXPIRY_HOURS && !settingsLoaded) {
+      setExpiryHours(settings.DEV_PASSWORD_EXPIRY_HOURS);
+      setSettingsLoaded(true);
+    }
+  }, [settings, settingsLoaded]);
 
   async function handleSaveSettings() {
-    const hours = parseInt(expiryHours, 10);
+    const hours = parseInt(expiryHours || "0", 10);
     if (isNaN(hours) || hours < 1 || hours > 168) {
       toast.error("Expiry must be between 1 and 168 hours");
       return;
@@ -117,7 +128,7 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
                     type="number"
                     min={1}
                     max={168}
-                    value={expiryHours || currentExpiry}
+                    value={expiryHours}
                     onChange={(e) => setExpiryHours(e.target.value)}
                     className="w-20"
                   />
@@ -147,6 +158,11 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-14" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <p className="text-destructive text-sm">Failed to load dev passwords. Please try again.</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
             </div>
           ) : !passwords?.length ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
