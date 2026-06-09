@@ -19,7 +19,7 @@ export const expenseSchema = z.object({
     .string()
     .min(1, "Date is required")
     .refine((d) => !isNaN(Date.parse(d)), "Invalid date"),
-  receiptUrl: z.string().optional().or(z.literal("")),
+  receiptUrl: z.string().nullable().optional().or(z.literal("")),
 });
 
 export const approvalSchema = z
