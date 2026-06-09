@@ -127,13 +127,15 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  expensesCreated     Expense[]       @relation("ExpenseCreatedBy")
-  expensesApproved    Expense[]       @relation("ExpenseApprovedBy")
-  keysGenerated       ActivationKey[] @relation("KeyGeneratedBy")
-  expenseApprovals    ExpenseApproval[] @relation("ExpenseApprovals")
-  applicationsCreated Application[]   @relation("AppCreatedBy")
-  paymentsRecorded    Payment[]       @relation("PaymentRecordedBy")
-  paymentsApproved    Payment[]       @relation("PaymentApprovedBy")
+  expensesCreated       Expense[]           @relation("ExpenseCreatedBy")
+  expensesApproved      Expense[]           @relation("ExpenseApprovedBy")
+  keysGenerated         ActivationKey[]     @relation("KeyGeneratedBy")
+  expenseApprovals      ExpenseApproval[]   @relation("ExpenseApprovals")
+  applicationsCreated   Application[]       @relation("AppCreatedBy")
+  paymentsRecorded      Payment[]           @relation("PaymentRecordedBy")
+  paymentsApproved      Payment[]           @relation("PaymentApprovedBy")
+  devPasswordsGenerated DevAccessPassword[] @relation("DevPasswordGeneratedBy")
+  systemConfigsUpdated  SystemConfig[]      @relation("ConfigUpdatedBy")
 
   @@map("users")
 }
@@ -167,10 +169,11 @@ model Client {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  contacts      Contact[]
-  subscription  Subscription?
-  activationKey ActivationKey?
-  payments      Payment[]
+  contacts           Contact[]
+  subscription       Subscription?
+  activationKey      ActivationKey?
+  payments           Payment[]
+  devAccessPasswords DevAccessPassword[]
 
   @@map("clients")
 }
@@ -332,4 +335,37 @@ model Payment {
   approvedBy   User?         @relation("PaymentApprovedBy", fields: [approvedById], references: [id])
 
   @@map("payments")
+}
+
+// ─────────────────────────────────────────────
+// Dev Access
+// ─────────────────────────────────────────────
+
+model DevAccessPassword {
+  id            String    @id @default(cuid())
+  clientId      String
+  generatedById String
+  passwordHash  String
+  reason        String
+  expiresAt     DateTime
+  usedAt        DateTime?
+  usedFromIp    String?
+  createdAt     DateTime  @default(now())
+
+  client      Client @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  generatedBy User   @relation("DevPasswordGeneratedBy", fields: [generatedById], references: [id])
+
+  @@map("dev_access_passwords")
+}
+
+model SystemConfig {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  updatedAt   DateTime @updatedAt
+  updatedById String?
+
+  updatedBy User? @relation("ConfigUpdatedBy", fields: [updatedById], references: [id])
+
+  @@map("system_config")
 }

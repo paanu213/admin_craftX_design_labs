@@ -191,3 +191,16 @@ export interface PaginatedResponse<T> {
   data: T[];
   meta: PaginationMeta;
 }
+
+export interface DevAccessPassword {
+  id: string;
+  clientId: string;
+  generatedById: string;
+  reason: string;
+  expiresAt: string;
+  usedAt: string | null;
+  usedFromIp: string | null;
+  createdAt: string;
+  generatedBy: { id: string; name: string; role: string };
+  client?: { id: string; name: string; company: string };
+}

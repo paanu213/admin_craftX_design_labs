@@ -147,3 +147,15 @@ export const KEY_TYPE_LABELS: Record<string, string> = {
   TRIAL: "Trial",
   SUBSCRIPTION: "Subscription",
 };
+
+export const DEV_PASSWORD_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "Active",
+  USED: "Used",
+  EXPIRED: "Expired",
+};
+
+export const DEV_PASSWORD_STATUS_VARIANT: Record<string, "success" | "secondary" | "destructive"> = {
+  ACTIVE: "success",
+  USED: "secondary",
+  EXPIRED: "destructive",
+};
