@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, UserX, UserCheck } from "lucide-react";
+import { Plus, UserX, UserCheck, KeyRound } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema, type CreateUserFormData } from "@/lib/validations/auth.schema";
@@ -50,6 +50,10 @@ export function UsersContent() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
+  const [resetPasswordUser, setResetPasswordUser] = useState<SafeUserWithGroups | null>(null);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmNewPassword, setConfirmNewPassword] = useState("");
+  const [isResetting, setIsResetting] = useState(false);
 
   const { data: users, isLoading } = useQuery<SafeUserWithGroups[]>({
     queryKey: ["users"],
@@ -118,6 +122,37 @@ export function UsersContent() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     } else {
       toast.error("Failed to update user");
+    }
+  }
+
+  async function handleResetPassword() {
+    if (!resetPasswordUser) return;
+    if (newPassword !== confirmNewPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+    if (newPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setIsResetting(true);
+    try {
+      const res = await fetch(`/api/users/${resetPasswordUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ password: newPassword }),
+      });
+      if (res.ok) {
+        toast.success("Password reset successfully");
+        setResetPasswordUser(null);
+        setNewPassword("");
+        setConfirmNewPassword("");
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? "Failed to reset password");
+      }
+    } finally {
+      setIsResetting(false);
     }
   }
 
@@ -198,6 +233,15 @@ export function UsersContent() {
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8"
+                      onClick={() => setResetPasswordUser(user)}
+                      title="Reset password"
+                    >
+                      <KeyRound className="h-4 w-4 text-muted-foreground" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
                       onClick={() => toggleActive(user)}
                       title={user.isActive ? "Deactivate user" : "Activate user"}
                     >
@@ -214,6 +258,65 @@ export function UsersContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Reset Password Dialog */}
+      <Dialog
+        open={!!resetPasswordUser}
+        onOpenChange={(open) => {
+          if (!open) {
+            setResetPasswordUser(null);
+            setNewPassword("");
+            setConfirmNewPassword("");
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Reset Password for {resetPasswordUser?.name}</DialogTitle>
+            <DialogDescription>
+              Enter a new password for this user.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="new-password">New Password</Label>
+              <Input
+                id="new-password"
+                type="password"
+                placeholder="Min. 8 characters"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirm-new-password">Confirm New Password</Label>
+              <Input
+                id="confirm-new-password"
+                type="password"
+                placeholder="Repeat new password"
+                value={confirmNewPassword}
+                onChange={(e) => setConfirmNewPassword(e.target.value)}
+              />
+            </div>
+          </div>
+          <DialogFooter className="pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setResetPasswordUser(null);
+                setNewPassword("");
+                setConfirmNewPassword("");
+              }}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleResetPassword} disabled={isResetting}>
+              {isResetting ? "Resetting..." : "Reset Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Create User Dialog */}
       <Dialog open={showCreate} onOpenChange={handleDialogClose}>

@@ -15,6 +15,7 @@ import {
 import { getInitials, ROLE_LABELS } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
 import type { UserRole } from "@/types";
+import { ChangePasswordDialog } from "@/components/layout/ChangePasswordDialog";
 
 interface HeaderProps {
   title?: string;
@@ -72,6 +73,7 @@ export function Header({ title }: HeaderProps) {
               </p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
+            <ChangePasswordDialog />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive gap-2 cursor-pointer"
               onClick={() => signOut({ callbackUrl: "/login" })}
