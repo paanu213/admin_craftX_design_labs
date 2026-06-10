@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { USER_ROLES } from "@/lib/validations/auth.schema";
 
 const createGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   description: z.string().max(500, "Description is too long").optional(),
-  defaultRole: z.enum(USER_ROLES),
 });
 
 export async function GET() {
@@ -68,7 +66,6 @@ export async function POST(request: NextRequest) {
       data: {
         name: result.data.name,
         description: result.data.description,
-        defaultRole: result.data.defaultRole as Parameters<typeof db.userGroup.create>[0]["data"]["defaultRole"],
       },
       include: {
         _count: { select: { members: true } },

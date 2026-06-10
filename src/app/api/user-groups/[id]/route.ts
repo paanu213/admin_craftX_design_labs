@@ -2,12 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { USER_ROLES } from "@/lib/validations/auth.schema";
 
 const updateGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
   description: z.string().max(500, "Description is too long").nullable().optional(),
-  defaultRole: z.enum(USER_ROLES).optional(),
   isActive: z.boolean().optional(),
 });
 
@@ -42,7 +40,6 @@ export async function PATCH(
       );
     }
 
-    // Check name uniqueness if name is being changed
     if (result.data.name && result.data.name !== existing.name) {
       const nameConflict = await db.userGroup.findUnique({ where: { name: result.data.name } });
       if (nameConflict) {
@@ -58,9 +55,6 @@ export async function PATCH(
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
         ...(result.data.description !== undefined && { description: result.data.description }),
-        ...(result.data.defaultRole !== undefined && {
-          defaultRole: result.data.defaultRole as Parameters<typeof db.userGroup.update>[0]["data"]["defaultRole"],
-        }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
       },
       include: {

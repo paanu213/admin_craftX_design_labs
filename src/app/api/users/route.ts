@@ -33,7 +33,7 @@ export async function GET() {
         updatedAt: true,
         groupId: true,
         group: {
-          select: { id: true, name: true, defaultRole: true },
+          select: { id: true, name: true },
         },
       },
     });
@@ -76,15 +76,11 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(result.data.password, 10);
 
-    // If groupId provided, fetch the group and use its defaultRole
-    let resolvedRole = result.data.role;
-    let resolvedGroupId: string | undefined = result.data.groupId;
-    if (resolvedGroupId) {
-      const group = await db.userGroup.findUnique({ where: { id: resolvedGroupId } });
+    if (result.data.groupId) {
+      const group = await db.userGroup.findUnique({ where: { id: result.data.groupId } });
       if (!group) {
         return NextResponse.json({ error: "Group not found" }, { status: 404 });
       }
-      resolvedRole = group.defaultRole;
     }
 
     const user = await db.user.create({
@@ -92,8 +88,8 @@ export async function POST(request: NextRequest) {
         name: result.data.name,
         email: result.data.email,
         password: hashedPassword,
-        role: resolvedRole as Parameters<typeof db.user.create>[0]["data"]["role"],
-        ...(resolvedGroupId ? { groupId: resolvedGroupId } : {}),
+        role: result.data.role as Parameters<typeof db.user.create>[0]["data"]["role"],
+        ...(result.data.groupId ? { groupId: result.data.groupId } : {}),
       },
       select: {
         id: true,
@@ -106,7 +102,7 @@ export async function POST(request: NextRequest) {
         updatedAt: true,
         groupId: true,
         group: {
-          select: { id: true, name: true, defaultRole: true },
+          select: { id: true, name: true },
         },
       },
     });

@@ -56,7 +56,6 @@ export interface UserGroup {
   id: string;
   name: string;
   description: string | null;
-  defaultRole: UserRole;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -73,7 +72,7 @@ export interface SafeUser {
   createdAt: Date;
   updatedAt: Date;
   groupId?: string | null;
-  group?: { id: string; name: string; defaultRole: UserRole } | null;
+  group?: { id: string; name: string } | null;
 }
 
 export interface ClientWithRelations {

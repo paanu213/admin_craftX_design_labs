@@ -19,7 +19,7 @@ const userSelect = {
   updatedAt: true,
   groupId: true,
   group: {
-    select: { id: true, name: true, defaultRole: true },
+    select: { id: true, name: true },
   },
 } as const;
 
@@ -86,22 +86,19 @@ export async function PUT(
       );
     }
 
-    // Resolve role from group if groupId is being set
-    let resolvedRole = result.data.role;
-    if (result.data.groupId !== undefined && result.data.groupId !== null) {
+    if (result.data.groupId) {
       const group = await db.userGroup.findUnique({ where: { id: result.data.groupId } });
       if (!group) {
         return NextResponse.json({ error: "Group not found" }, { status: 404 });
       }
-      resolvedRole = group.defaultRole;
     }
 
     const updated = await db.user.update({
       where: { id },
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
-        ...(resolvedRole !== undefined && {
-          role: resolvedRole as Parameters<typeof db.user.update>[0]["data"]["role"],
+        ...(result.data.role !== undefined && {
+          role: result.data.role as Parameters<typeof db.user.update>[0]["data"]["role"],
         }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
         ...(result.data.groupId !== undefined && { groupId: result.data.groupId }),

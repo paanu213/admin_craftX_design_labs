@@ -61,12 +61,6 @@ export function UsersContent() {
 
   function handleGroupSelect(groupId: string) {
     setSelectedGroupId(groupId);
-    if (groupId !== "none") {
-      const group = groups?.find((g) => g.id === groupId);
-      if (group) {
-        setValue("role", group.defaultRole as CreateUserFormData["role"]);
-      }
-    }
   }
 
   async function onCreateUser(data: CreateUserFormData) {
@@ -259,9 +253,6 @@ export function UsersContent() {
                     ))}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-muted-foreground">
-                Selecting a group will set the role to the group&apos;s default role
-              </p>
             </div>
 
             <div className="space-y-2">

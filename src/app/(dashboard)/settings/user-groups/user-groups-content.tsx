@@ -12,13 +12,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PageHeader } from "@/components/layout/PageWrapper";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -26,23 +19,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ROLE_LABELS } from "@/lib/utils";
 import type { UserGroup } from "@/types";
-import type { UserRole } from "@/types";
-
-const ALL_ROLES: UserRole[] = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
 
 interface GroupFormState {
   name: string;
   description: string;
-  defaultRole: UserRole;
 }
 
-const defaultForm: GroupFormState = {
-  name: "",
-  description: "",
-  defaultRole: "COO",
-};
+const defaultForm: GroupFormState = { name: "", description: "" };
 
 export function UserGroupsContent() {
   const queryClient = useQueryClient();
@@ -62,11 +46,7 @@ export function UserGroupsContent() {
   }
 
   function openEdit(group: UserGroup) {
-    setForm({
-      name: group.name,
-      description: group.description ?? "",
-      defaultRole: group.defaultRole,
-    });
+    setForm({ name: group.name, description: group.description ?? "" });
     setEditingGroup(group);
   }
 
@@ -89,7 +69,6 @@ export function UserGroupsContent() {
         body: JSON.stringify({
           name: form.name.trim(),
           description: form.description.trim() || undefined,
-          defaultRole: form.defaultRole,
         }),
       });
       if (!res.ok) {
@@ -119,7 +98,6 @@ export function UserGroupsContent() {
         body: JSON.stringify({
           name: form.name.trim(),
           description: form.description.trim() || null,
-          defaultRole: form.defaultRole,
         }),
       });
       if (!res.ok) {
@@ -169,7 +147,7 @@ export function UserGroupsContent() {
         <Label htmlFor="group-name">Group Name *</Label>
         <Input
           id="group-name"
-          placeholder="e.g. Engineering Team"
+          placeholder="e.g. Founders"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         />
@@ -184,25 +162,6 @@ export function UserGroupsContent() {
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         />
       </div>
-
-      <div className="space-y-2">
-        <Label>Default Role *</Label>
-        <Select
-          value={form.defaultRole}
-          onValueChange={(v) => setForm((f) => ({ ...f, defaultRole: v as UserRole }))}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_ROLES.map((role) => (
-              <SelectItem key={role} value={role}>
-                {ROLE_LABELS[role]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
     </div>
   );
 
@@ -210,7 +169,7 @@ export function UserGroupsContent() {
     <div className="space-y-4">
       <PageHeader
         title="User Groups"
-        description="Organise team members into groups with a shared default role"
+        description="Organise team members into groups"
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
@@ -244,13 +203,9 @@ export function UserGroupsContent() {
                     key={group.id}
                     className="flex items-center justify-between px-4 py-4 gap-4"
                   >
-                    {/* Left: name + description */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium truncate">{group.name}</p>
-                        <Badge variant="secondary">
-                          {ROLE_LABELS[group.defaultRole]}
-                        </Badge>
                         <Badge variant={group.isActive ? "success" : "muted"}>
                           {group.isActive ? "Active" : "Inactive"}
                         </Badge>
@@ -262,7 +217,6 @@ export function UserGroupsContent() {
                       )}
                     </div>
 
-                    {/* Right: member count + actions */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground hidden sm:block">
                         {memberCount} {memberCount === 1 ? "member" : "members"}
