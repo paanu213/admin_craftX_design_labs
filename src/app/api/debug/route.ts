@@ -13,6 +13,8 @@ export async function GET() {
   const results: Record<string, string> = {};
 
   const tests: [string, () => Promise<unknown>][] = [
+    ["clients.count",          () => db.client.count()],
+    ["clients.findMany",       () => db.client.findMany({ take: 1, include: { subscription: true } })],
     ["payments.count",         () => db.payment.count()],
     ["devAccessPassword.count",() => db.devAccessPassword.count()],
     ["systemConfig.count",     () => db.systemConfig.count()],

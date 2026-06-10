@@ -78,7 +78,7 @@ export function ClientsContent() {
     queryFn: () => fetch(`/api/clients/stats?period=${period}`).then((r) => r.json()),
   });
 
-  const { data, isLoading, refetch } = useQuery<ClientsResponse>({
+  const { data, isLoading, isError, error, refetch } = useQuery<ClientsResponse>({
     queryKey: ["clients", page, search, statusFilter, period],
     queryFn: async () => {
       const params = new URLSearchParams({
@@ -220,6 +220,12 @@ export function ClientsContent() {
               {Array.from({ length: 5 }).map((_, i) => (
                 <Skeleton key={i} className="h-16" />
               ))}
+            </div>
+          ) : isError ? (
+            <div className="flex flex-col items-center justify-center py-16 gap-3">
+              <p className="text-destructive text-sm font-medium">Failed to load clients</p>
+              <p className="text-muted-foreground text-xs max-w-sm text-center">{String(error)}</p>
+              <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
             </div>
           ) : !data?.data?.length ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
