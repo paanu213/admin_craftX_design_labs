@@ -27,6 +27,13 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Resolve any previously failed migrations
+        run: |
+          npx prisma migrate resolve --rolled-back 20260608000002_expense_approvals || true
+        env:
+          DIRECT_DATABASE_URL: ${{ secrets.DIRECT_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+
       - name: Run database migrations
         run: npm run migrate:deploy
         env:
