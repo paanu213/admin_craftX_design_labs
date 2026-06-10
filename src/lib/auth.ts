@@ -7,6 +7,7 @@ import type { UserRole } from "@/types";
 import {
   computeEffectivePermissions,
   getPermissionsFromRole,
+  FULL_PERMISSIONS,
   type PermissionMatrix,
 } from "@/lib/permissions";
 
@@ -20,7 +21,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const { email, password } = parsed.data;
 
-        const user = await db.user.findUnique({ where: { email } });
+        const user = await db.user.findUnique({ where: { email: email.toLowerCase() } });
         if (!user || !user.isActive) return null;
 
         const passwordMatch = await bcrypt.compare(password, user.password);
@@ -61,6 +62,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           } else {
             token.groups = [];
             token.permissionMatrix = getPermissionsFromRole(token.role as string);
+          }
+
+          // SUPER_ADMIN role always gets full access regardless of group config
+          if (token.role === 'SUPER_ADMIN') {
+            token.permissionMatrix = FULL_PERMISSIONS;
           }
         } catch {
           token.groups = [];

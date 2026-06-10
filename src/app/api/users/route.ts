@@ -70,7 +70,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existing = await db.user.findUnique({ where: { email: result.data.email } });
+    const normalizedEmail = result.data.email.toLowerCase();
+
+    const existing = await db.user.findUnique({ where: { email: normalizedEmail } });
     if (existing) {
       return NextResponse.json(
         { error: "A user with this email already exists" },
@@ -93,7 +95,7 @@ export async function POST(request: NextRequest) {
     const user = await db.user.create({
       data: {
         name: result.data.name,
-        email: result.data.email,
+        email: normalizedEmail,
         password: hashedPassword,
         role: result.data.role as Parameters<typeof db.user.create>[0]["data"]["role"],
       },
