@@ -8,7 +8,7 @@ const updateGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
   description: z.string().max(500, "Description is too long").nullable().optional(),
   isActive: z.boolean().optional(),
-  permissions: z.record(z.unknown()).optional(),
+  permissions: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function PATCH(
@@ -60,7 +60,7 @@ export async function PATCH(
         ...(result.data.name !== undefined && { name: result.data.name }),
         ...(result.data.description !== undefined && { description: result.data.description }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
-        ...(result.data.permissions !== undefined && { permissions: result.data.permissions }),
+        ...(result.data.permissions !== undefined && { permissions: result.data.permissions as Parameters<typeof db.userGroup.update>[0]["data"]["permissions"] }),
       },
       include: {
         _count: { select: { members: true } },

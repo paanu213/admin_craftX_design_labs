@@ -7,7 +7,7 @@ import { canDo } from "@/lib/permissions";
 const createGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long"),
   description: z.string().max(500, "Description is too long").optional(),
-  permissions: z.record(z.unknown()).optional(),
+  permissions: z.record(z.string(), z.unknown()).optional(),
 });
 
 export async function GET() {
@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
       data: {
         name: result.data.name,
         description: result.data.description,
-        permissions: result.data.permissions ?? {},
+        permissions: (result.data.permissions ?? {}) as Parameters<typeof db.userGroup.create>[0]["data"]["permissions"],
       },
       include: {
         _count: { select: { members: true } },
