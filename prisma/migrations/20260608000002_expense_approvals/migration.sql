@@ -1,8 +1,8 @@
--- Add ExpenseApprovalStatus enum
-CREATE TYPE "ExpenseApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+-- Add ExpenseApprovalStatus enum (idempotent)
+DO $$ BEGIN CREATE TYPE "ExpenseApprovalStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED'); EXCEPTION WHEN duplicate_object THEN null; END $$;
 
--- Expense approvals table (one row per founder per expense)
-CREATE TABLE "expense_approvals" (
+-- Expense approvals table (idempotent)
+CREATE TABLE IF NOT EXISTS "expense_approvals" (
     "id"         TEXT NOT NULL,
     "expenseId"  TEXT NOT NULL,
     "approverId" TEXT NOT NULL,
@@ -12,11 +12,20 @@ CREATE TABLE "expense_approvals" (
     "createdAt"  TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT "expense_approvals_pkey" PRIMARY KEY ("id")
 );
-CREATE UNIQUE INDEX "expense_approvals_expenseId_approverId_key"
-    ON "expense_approvals"("expenseId", "approverId");
-ALTER TABLE "expense_approvals"
-    ADD CONSTRAINT "expense_approvals_expenseId_fkey"
-    FOREIGN KEY ("expenseId") REFERENCES "expenses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
-ALTER TABLE "expense_approvals"
-    ADD CONSTRAINT "expense_approvals_approverId_fkey"
-    FOREIGN KEY ("approverId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+
+DO $$ BEGIN
+    CREATE UNIQUE INDEX "expense_approvals_expenseId_approverId_key"
+        ON "expense_approvals"("expenseId", "approverId");
+EXCEPTION WHEN duplicate_table THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "expense_approvals"
+        ADD CONSTRAINT "expense_approvals_expenseId_fkey"
+        FOREIGN KEY ("expenseId") REFERENCES "expenses"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
+
+DO $$ BEGIN
+    ALTER TABLE "expense_approvals"
+        ADD CONSTRAINT "expense_approvals_approverId_fkey"
+        FOREIGN KEY ("approverId") REFERENCES "users"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+EXCEPTION WHEN duplicate_object THEN null; END $$;
