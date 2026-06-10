@@ -43,20 +43,26 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         token.role = (user as { role: UserRole }).role;
 
         // Fetch groups and compute permission matrix on sign-in
-        const groups = await db.userGroup.findMany({
-          where: {
-            members: { some: { userId: user.id as string } },
-            isActive: true,
-          },
-          select: { id: true, name: true, permissions: true },
-        });
+        // Wrapped in try/catch so a missing migration never breaks login
+        try {
+          const groups = await db.userGroup.findMany({
+            where: {
+              members: { some: { userId: user.id as string } },
+              isActive: true,
+            },
+            select: { id: true, name: true, permissions: true },
+          });
 
-        if (groups.length > 0) {
-          token.groups = groups.map(g => ({ id: g.id, name: g.name }));
-          token.permissionMatrix = computeEffectivePermissions(
-            groups.map(g => g.permissions as Partial<PermissionMatrix>)
-          );
-        } else {
+          if (groups.length > 0) {
+            token.groups = groups.map(g => ({ id: g.id, name: g.name }));
+            token.permissionMatrix = computeEffectivePermissions(
+              groups.map(g => g.permissions as Partial<PermissionMatrix>)
+            );
+          } else {
+            token.groups = [];
+            token.permissionMatrix = getPermissionsFromRole(token.role as string);
+          }
+        } catch {
           token.groups = [];
           token.permissionMatrix = getPermissionsFromRole(token.role as string);
         }
