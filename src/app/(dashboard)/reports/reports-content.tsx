@@ -58,9 +58,14 @@ function exportToCSV(data: unknown[], filename: string) {
 }
 
 export function ReportsContent() {
-  const { data, isLoading } = useQuery<DashboardData>({
+  const { data, isLoading, isError, error, refetch } = useQuery<DashboardData>({
     queryKey: ["dashboard"],
-    queryFn: () => fetch("/api/dashboard").then((r) => r.json()),
+    queryFn: async () => {
+      const res = await fetch("/api/dashboard");
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? "Failed to load reports");
+      return json;
+    },
   });
 
   if (isLoading) {
@@ -71,6 +76,16 @@ export function ReportsContent() {
           <Skeleton className="h-72" />
           <Skeleton className="h-72" />
         </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[40vh] gap-3 text-center">
+        <p className="text-destructive font-medium">Failed to load reports</p>
+        <p className="text-muted-foreground text-sm max-w-md">{String(error)}</p>
+        <Button variant="outline" size="sm" onClick={() => refetch()}>Retry</Button>
       </div>
     );
   }
