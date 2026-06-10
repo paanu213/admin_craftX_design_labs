@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { updateUserApiSchema } from "@/lib/validations/auth.schema";
@@ -7,6 +8,7 @@ import { canDo } from "@/lib/permissions";
 
 const updateUserWithGroupSchema = updateUserApiSchema.extend({
   groupIds: z.array(z.string()).nullable().optional(),
+  password: z.string().min(8).optional(),
 });
 
 const userSelect = {
@@ -69,7 +71,7 @@ export async function PUT(
     }
 
     const matrix = session.user.permissionMatrix;
-    if (!canDo(matrix, 'users', 'create')) {
+    if (!canDo(matrix, 'users', 'update')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -100,6 +102,10 @@ export async function PUT(
       }
     }
 
+    const hashedPassword = result.data.password
+      ? await bcrypt.hash(result.data.password, 10)
+      : undefined;
+
     const updated = await db.user.update({
       where: { id },
       data: {
@@ -108,6 +114,7 @@ export async function PUT(
           role: result.data.role as Parameters<typeof db.user.update>[0]["data"]["role"],
         }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
+        ...(hashedPassword !== undefined && { password: hashedPassword }),
       },
       select: userSelect,
     });
