@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
+import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { updateUserApiSchema } from "@/lib/validations/auth.schema";
+
+const updateUserWithGroupSchema = updateUserApiSchema.extend({
+  groupId: z.string().nullable().optional(),
+});
 
 const userSelect = {
   id: true,
@@ -12,6 +17,10 @@ const userSelect = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
+  groupId: true,
+  group: {
+    select: { id: true, name: true, defaultRole: true },
+  },
 } as const;
 
 export async function GET(
@@ -69,7 +78,7 @@ export async function PUT(
 
     const body = await request.json();
 
-    const result = updateUserApiSchema.safeParse(body);
+    const result = updateUserWithGroupSchema.safeParse(body);
     if (!result.success) {
       return NextResponse.json(
         { error: "Validation failed", fields: result.error.flatten().fieldErrors },
@@ -77,14 +86,25 @@ export async function PUT(
       );
     }
 
+    // Resolve role from group if groupId is being set
+    let resolvedRole = result.data.role;
+    if (result.data.groupId !== undefined && result.data.groupId !== null) {
+      const group = await db.userGroup.findUnique({ where: { id: result.data.groupId } });
+      if (!group) {
+        return NextResponse.json({ error: "Group not found" }, { status: 404 });
+      }
+      resolvedRole = group.defaultRole;
+    }
+
     const updated = await db.user.update({
       where: { id },
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
-        ...(result.data.role !== undefined && {
-          role: result.data.role as Parameters<typeof db.user.update>[0]["data"]["role"],
+        ...(resolvedRole !== undefined && {
+          role: resolvedRole as Parameters<typeof db.user.update>[0]["data"]["role"],
         }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
+        ...(result.data.groupId !== undefined && { groupId: result.data.groupId }),
       },
       select: userSelect,
     });

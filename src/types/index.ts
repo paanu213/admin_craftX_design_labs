@@ -52,6 +52,17 @@ export interface Payment {
   client?: { id: string; name: string; company: string };
 }
 
+export interface UserGroup {
+  id: string;
+  name: string;
+  description: string | null;
+  defaultRole: UserRole;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  _count?: { members: number };
+}
+
 export interface SafeUser {
   id: string;
   name: string;
@@ -61,6 +72,8 @@ export interface SafeUser {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
+  groupId?: string | null;
+  group?: { id: string; name: string; defaultRole: UserRole } | null;
 }
 
 export interface ClientWithRelations {

@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   Banknote,
   Terminal,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
@@ -34,6 +35,7 @@ const navItems = [
 
 const adminItems = [
   { label: "Users", href: "/settings/users", icon: Settings, permission: "manageUsers" as const },
+  { label: "User Groups", href: "/settings/user-groups", icon: UsersRound, permission: "manageUsers" as const },
 ];
 
 export function Sidebar() {

@@ -116,6 +116,20 @@ enum AppStatus {
 // User
 // ─────────────────────────────────────────────
 
+model UserGroup {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  description String?
+  defaultRole UserRole @default(COO)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  members     User[]
+
+  @@map("user_groups")
+}
+
 model User {
   id        String   @id @default(cuid())
   name      String
@@ -126,6 +140,8 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  groupId   String?
+  group     UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
   expensesCreated       Expense[]           @relation("ExpenseCreatedBy")
   expensesApproved      Expense[]           @relation("ExpenseApprovedBy")
