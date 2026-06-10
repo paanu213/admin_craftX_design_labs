@@ -31,15 +31,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getInitials, ROLE_LABELS, formatDate } from "@/lib/utils";
-import type { SafeUser } from "@/types";
+import type { SafeUser, UserGroup, UserRole } from "@/types";
 
 export function UsersContent() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
+  const [selectedGroupId, setSelectedGroupId] = useState<string>("none");
 
   const { data: users, isLoading } = useQuery<SafeUser[]>({
     queryKey: ["users"],
     queryFn: () => fetch("/api/users").then((r) => r.json()),
+  });
+
+  const { data: groups } = useQuery<UserGroup[]>({
+    queryKey: ["user-groups"],
+    queryFn: () => fetch("/api/user-groups").then((r) => r.json()),
   });
 
   const {
@@ -53,11 +59,31 @@ export function UsersContent() {
     defaultValues: { role: "CEO" },
   });
 
+  function handleGroupSelect(groupId: string) {
+    setSelectedGroupId(groupId);
+    if (groupId !== "none") {
+      const group = groups?.find((g) => g.id === groupId);
+      if (group) {
+        setValue("role", group.defaultRole as CreateUserFormData["role"]);
+      }
+    }
+  }
+
   async function onCreateUser(data: CreateUserFormData) {
+    const payload: Record<string, unknown> = {
+      name: data.name,
+      email: data.email,
+      password: data.password,
+      role: data.role,
+    };
+    if (selectedGroupId !== "none") {
+      payload.groupId = selectedGroupId;
+    }
+
     const res = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
+      body: JSON.stringify(payload),
     });
 
     if (!res.ok) {
@@ -68,6 +94,7 @@ export function UsersContent() {
 
     toast.success("User created successfully");
     setShowCreate(false);
+    setSelectedGroupId("none");
     reset();
     queryClient.invalidateQueries({ queryKey: ["users"] });
   }
@@ -84,6 +111,14 @@ export function UsersContent() {
       queryClient.invalidateQueries({ queryKey: ["users"] });
     } else {
       toast.error("Failed to update user");
+    }
+  }
+
+  function handleDialogClose(open: boolean) {
+    if (!open) {
+      setShowCreate(false);
+      setSelectedGroupId("none");
+      reset();
     }
   }
 
@@ -126,7 +161,7 @@ export function UsersContent() {
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium">{user.name}</p>
                         {!user.isActive && (
                           <Badge variant="muted" className="text-xs">
@@ -138,10 +173,15 @@ export function UsersContent() {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     <Badge variant="secondary">
                       {ROLE_LABELS[user.role]}
                     </Badge>
+                    {user.group && (
+                      <Badge variant="outline" className="text-xs">
+                        {user.group.name}
+                      </Badge>
+                    )}
                     <p className="text-xs text-muted-foreground hidden md:block">
                       Joined {formatDate(user.createdAt)}
                     </p>
@@ -167,7 +207,7 @@ export function UsersContent() {
       </Card>
 
       {/* Create User Dialog */}
-      <Dialog open={showCreate} onOpenChange={setShowCreate}>
+      <Dialog open={showCreate} onOpenChange={handleDialogClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New User</DialogTitle>
@@ -198,6 +238,32 @@ export function UsersContent() {
               )}
             </div>
 
+            {/* User Group (optional) - above Role */}
+            <div className="space-y-2">
+              <Label>User Group</Label>
+              <Select
+                value={selectedGroupId}
+                onValueChange={handleGroupSelect}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="No group" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">No group</SelectItem>
+                  {groups
+                    ?.filter((g) => g.isActive)
+                    .map((group) => (
+                      <SelectItem key={group.id} value={group.id}>
+                        {group.name}
+                      </SelectItem>
+                    ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Selecting a group will set the role to the group&apos;s default role
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label>Role *</Label>
               <Select
@@ -210,12 +276,13 @@ export function UsersContent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
-                  <SelectItem value="CEO">CEO</SelectItem>
-                  <SelectItem value="CMO">CMO</SelectItem>
-                  <SelectItem value="CFO">CFO</SelectItem>
-                  <SelectItem value="CTO">CTO</SelectItem>
-                  <SelectItem value="COO">COO</SelectItem>
+                  {(["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[]).map(
+                    (role) => (
+                      <SelectItem key={role} value={role}>
+                        {ROLE_LABELS[role]}
+                      </SelectItem>
+                    )
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -252,7 +319,7 @@ export function UsersContent() {
               <Button
                 type="button"
                 variant="outline"
-                onClick={() => setShowCreate(false)}
+                onClick={() => handleDialogClose(false)}
               >
                 Cancel
               </Button>
