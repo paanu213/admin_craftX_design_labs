@@ -4,9 +4,10 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { createUserApiSchema } from "@/lib/validations/auth.schema";
+import { canDo } from "@/lib/permissions";
 
 const createUserWithGroupSchema = createUserApiSchema.extend({
-  groupId: z.string().optional(),
+  groupIds: z.array(z.string()).optional(),
 });
 
 export async function GET() {
@@ -16,7 +17,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -31,9 +33,10 @@ export async function GET() {
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        groupId: true,
-        group: {
-          select: { id: true, name: true, defaultRole: true },
+        groupMemberships: {
+          select: {
+            group: { select: { id: true, name: true } },
+          },
         },
       },
     });
@@ -52,7 +55,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -76,15 +80,14 @@ export async function POST(request: NextRequest) {
 
     const hashedPassword = await bcrypt.hash(result.data.password, 10);
 
-    // If groupId provided, fetch the group and use its defaultRole
-    let resolvedRole = result.data.role;
-    let resolvedGroupId: string | undefined = result.data.groupId;
-    if (resolvedGroupId) {
-      const group = await db.userGroup.findUnique({ where: { id: resolvedGroupId } });
-      if (!group) {
-        return NextResponse.json({ error: "Group not found" }, { status: 404 });
+    // Validate all group IDs
+    if (result.data.groupIds && result.data.groupIds.length > 0) {
+      for (const groupId of result.data.groupIds) {
+        const group = await db.userGroup.findUnique({ where: { id: groupId } });
+        if (!group) {
+          return NextResponse.json({ error: `Group not found: ${groupId}` }, { status: 404 });
+        }
       }
-      resolvedRole = group.defaultRole;
     }
 
     const user = await db.user.create({
@@ -92,8 +95,7 @@ export async function POST(request: NextRequest) {
         name: result.data.name,
         email: result.data.email,
         password: hashedPassword,
-        role: resolvedRole as Parameters<typeof db.user.create>[0]["data"]["role"],
-        ...(resolvedGroupId ? { groupId: resolvedGroupId } : {}),
+        role: result.data.role as Parameters<typeof db.user.create>[0]["data"]["role"],
       },
       select: {
         id: true,
@@ -104,14 +106,40 @@ export async function POST(request: NextRequest) {
         isActive: true,
         createdAt: true,
         updatedAt: true,
-        groupId: true,
-        group: {
-          select: { id: true, name: true, defaultRole: true },
+      },
+    });
+
+    // Create group memberships
+    if (result.data.groupIds && result.data.groupIds.length > 0) {
+      await db.userGroupMember.createMany({
+        data: result.data.groupIds.map((groupId) => ({
+          userId: user.id,
+          groupId,
+        })),
+        skipDuplicates: true,
+      });
+    }
+
+    const userWithGroups = await db.user.findUnique({
+      where: { id: user.id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        avatar: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true,
+        groupMemberships: {
+          select: {
+            group: { select: { id: true, name: true } },
+          },
         },
       },
     });
 
-    return NextResponse.json(user, { status: 201 });
+    return NextResponse.json(userWithGroups, { status: 201 });
   } catch (error) {
     console.error("[POST /api/users]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

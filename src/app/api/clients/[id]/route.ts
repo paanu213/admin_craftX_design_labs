@@ -2,10 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validations/client.schema";
+import { canDo } from "@/lib/permissions";
 import { z } from "zod";
-
-const ALLOWED_EDIT_ROLES = ["SUPER_ADMIN", "CEO", "CMO"];
-const ALLOWED_DELETE_ROLES = ["SUPER_ADMIN", "CEO"];
 
 export async function GET(
   _request: NextRequest,
@@ -80,7 +78,8 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!ALLOWED_EDIT_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'clients', 'update')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -145,7 +144,9 @@ export async function PATCH(
   try {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!ALLOWED_EDIT_ROLES.includes(session.user.role)) {
+
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'clients', 'update')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -181,7 +182,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!ALLOWED_DELETE_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'clients', 'delete')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

@@ -2,13 +2,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { USER_ROLES } from "@/lib/validations/auth.schema";
+import { canDo } from "@/lib/permissions";
 
 const updateGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
   description: z.string().max(500, "Description is too long").nullable().optional(),
-  defaultRole: z.enum(USER_ROLES).optional(),
   isActive: z.boolean().optional(),
+  permissions: z.record(z.unknown()).optional(),
 });
 
 export async function PATCH(
@@ -21,7 +21,8 @@ export async function PATCH(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -58,10 +59,8 @@ export async function PATCH(
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
         ...(result.data.description !== undefined && { description: result.data.description }),
-        ...(result.data.defaultRole !== undefined && {
-          defaultRole: result.data.defaultRole as Parameters<typeof db.userGroup.update>[0]["data"]["defaultRole"],
-        }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
+        ...(result.data.permissions !== undefined && { permissions: result.data.permissions }),
       },
       include: {
         _count: { select: { members: true } },
@@ -85,7 +84,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

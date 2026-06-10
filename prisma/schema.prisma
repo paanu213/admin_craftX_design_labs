@@ -120,14 +120,24 @@ model UserGroup {
   id          String   @id @default(cuid())
   name        String   @unique
   description String?
-  defaultRole UserRole @default(COO)
   isActive    Boolean  @default(true)
+  permissions Json     @default("{}")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
-  members     User[]
+  members     UserGroupMember[]
 
   @@map("user_groups")
+}
+
+model UserGroupMember {
+  userId    String
+  groupId   String
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group     UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+  @@map("user_group_members")
 }
 
 model User {
@@ -140,9 +150,8 @@ model User {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
-  groupId   String?
-  group     UserGroup? @relation(fields: [groupId], references: [id], onDelete: SetNull)
 
+  groupMemberships      UserGroupMember[]
   expensesCreated       Expense[]           @relation("ExpenseCreatedBy")
   expensesApproved      Expense[]           @relation("ExpenseApprovedBy")
   keysGenerated         ActivationKey[]     @relation("KeyGeneratedBy")

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const MANAGE_ROLES = ["SUPER_ADMIN", "CEO"];
+import { canDo } from "@/lib/permissions";
 
 export async function GET() {
   try {
@@ -31,9 +30,10 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!MANAGE_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'settings', 'update')) {
       return NextResponse.json(
-        { error: "Only CEO or Super Admin can update settings" },
+        { error: "You do not have permission to update settings" },
         { status: 403 }
       );
     }

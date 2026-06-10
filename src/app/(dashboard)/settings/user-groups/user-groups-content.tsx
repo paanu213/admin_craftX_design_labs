@@ -3,21 +3,15 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Power, Trash2 } from "lucide-react";
+import { Plus, Pencil, Power, Trash2, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/layout/PageWrapper";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import {
   Dialog,
   DialogContent,
@@ -26,30 +20,33 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ROLE_LABELS } from "@/lib/utils";
+import { MODULES, EMPTY_PERMISSIONS, type PermissionMatrix, type ModuleKey, type Action } from "@/lib/permissions";
 import type { UserGroup } from "@/types";
-import type { UserRole } from "@/types";
-
-const ALL_ROLES: UserRole[] = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
 
 interface GroupFormState {
   name: string;
   description: string;
-  defaultRole: UserRole;
 }
 
-const defaultForm: GroupFormState = {
-  name: "",
-  description: "",
-  defaultRole: "COO",
+const defaultForm: GroupFormState = { name: "", description: "" };
+
+const ACTIONS: Action[] = ['read', 'create', 'update', 'delete'];
+const ACTION_LABELS: Record<Action, string> = {
+  read: 'Read',
+  create: 'Create',
+  update: 'Update',
+  delete: 'Delete',
 };
 
 export function UserGroupsContent() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
   const [editingGroup, setEditingGroup] = useState<UserGroup | null>(null);
+  const [permissionsGroup, setPermissionsGroup] = useState<UserGroup | null>(null);
   const [form, setForm] = useState<GroupFormState>(defaultForm);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [permMatrix, setPermMatrix] = useState<PermissionMatrix>(structuredClone(EMPTY_PERMISSIONS));
+  const [isSavingPerms, setIsSavingPerms] = useState(false);
 
   const { data: groups, isLoading } = useQuery<UserGroup[]>({
     queryKey: ["user-groups"],
@@ -62,18 +59,42 @@ export function UserGroupsContent() {
   }
 
   function openEdit(group: UserGroup) {
-    setForm({
-      name: group.name,
-      description: group.description ?? "",
-      defaultRole: group.defaultRole,
-    });
+    setForm({ name: group.name, description: group.description ?? "" });
     setEditingGroup(group);
+  }
+
+  function openPermissions(group: UserGroup) {
+    // Pre-fill current permissions from the group
+    const existing = group.permissions as Partial<PermissionMatrix> | undefined;
+    const matrix = structuredClone(EMPTY_PERMISSIONS);
+    if (existing) {
+      for (const mod of MODULES) {
+        const src = existing[mod.key];
+        if (src) {
+          matrix[mod.key].read   = src.read   ?? false;
+          matrix[mod.key].create = src.create ?? false;
+          matrix[mod.key].update = src.update ?? false;
+          matrix[mod.key].delete = src.delete ?? false;
+        }
+      }
+    }
+    setPermMatrix(matrix);
+    setPermissionsGroup(group);
   }
 
   function closeDialogs() {
     setShowCreate(false);
     setEditingGroup(null);
+    setPermissionsGroup(null);
     setForm(defaultForm);
+  }
+
+  function togglePermission(moduleKey: ModuleKey, action: Action) {
+    setPermMatrix((prev) => {
+      const next = structuredClone(prev);
+      next[moduleKey][action] = !next[moduleKey][action];
+      return next;
+    });
   }
 
   async function handleCreate() {
@@ -89,7 +110,6 @@ export function UserGroupsContent() {
         body: JSON.stringify({
           name: form.name.trim(),
           description: form.description.trim() || undefined,
-          defaultRole: form.defaultRole,
         }),
       });
       if (!res.ok) {
@@ -119,7 +139,6 @@ export function UserGroupsContent() {
         body: JSON.stringify({
           name: form.name.trim(),
           description: form.description.trim() || null,
-          defaultRole: form.defaultRole,
         }),
       });
       if (!res.ok) {
@@ -132,6 +151,28 @@ export function UserGroupsContent() {
       queryClient.invalidateQueries({ queryKey: ["user-groups"] });
     } finally {
       setIsSubmitting(false);
+    }
+  }
+
+  async function handleSavePermissions() {
+    if (!permissionsGroup) return;
+    setIsSavingPerms(true);
+    try {
+      const res = await fetch(`/api/user-groups/${permissionsGroup.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ permissions: permMatrix }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? "Failed to save permissions");
+        return;
+      }
+      toast.success("Permissions saved successfully");
+      closeDialogs();
+      queryClient.invalidateQueries({ queryKey: ["user-groups"] });
+    } finally {
+      setIsSavingPerms(false);
     }
   }
 
@@ -169,7 +210,7 @@ export function UserGroupsContent() {
         <Label htmlFor="group-name">Group Name *</Label>
         <Input
           id="group-name"
-          placeholder="e.g. Engineering Team"
+          placeholder="e.g. Founders"
           value={form.name}
           onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
         />
@@ -184,25 +225,6 @@ export function UserGroupsContent() {
           onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
         />
       </div>
-
-      <div className="space-y-2">
-        <Label>Default Role *</Label>
-        <Select
-          value={form.defaultRole}
-          onValueChange={(v) => setForm((f) => ({ ...f, defaultRole: v as UserRole }))}
-        >
-          <SelectTrigger>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            {ALL_ROLES.map((role) => (
-              <SelectItem key={role} value={role}>
-                {ROLE_LABELS[role]}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
     </div>
   );
 
@@ -210,7 +232,7 @@ export function UserGroupsContent() {
     <div className="space-y-4">
       <PageHeader
         title="User Groups"
-        description="Organise team members into groups with a shared default role"
+        description="Organise team members into groups"
         actions={
           <Button onClick={openCreate}>
             <Plus className="h-4 w-4" />
@@ -244,13 +266,9 @@ export function UserGroupsContent() {
                     key={group.id}
                     className="flex items-center justify-between px-4 py-4 gap-4"
                   >
-                    {/* Left: name + description */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium truncate">{group.name}</p>
-                        <Badge variant="secondary">
-                          {ROLE_LABELS[group.defaultRole]}
-                        </Badge>
                         <Badge variant={group.isActive ? "success" : "muted"}>
                           {group.isActive ? "Active" : "Inactive"}
                         </Badge>
@@ -262,11 +280,19 @@ export function UserGroupsContent() {
                       )}
                     </div>
 
-                    {/* Right: member count + actions */}
                     <div className="flex items-center gap-2 shrink-0">
                       <span className="text-xs text-muted-foreground hidden sm:block">
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => openPermissions(group)}
+                        title="Manage permissions"
+                      >
+                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
+                      </Button>
                       <Button
                         variant="ghost"
                         size="icon"
@@ -351,6 +377,57 @@ export function UserGroupsContent() {
             </Button>
             <Button onClick={handleEdit} disabled={isSubmitting}>
               {isSubmitting ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permissions Matrix Dialog */}
+      <Dialog open={!!permissionsGroup} onOpenChange={(open) => { if (!open) closeDialogs(); }}>
+        <DialogContent className="sm:max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Manage Permissions — {permissionsGroup?.name}</DialogTitle>
+            <DialogDescription>
+              Configure what actions this group can perform on each module
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr>
+                  <th className="text-left py-2 pr-4 font-medium text-muted-foreground">Module</th>
+                  {ACTIONS.map((action) => (
+                    <th key={action} className="text-center py-2 px-3 font-medium text-muted-foreground">
+                      {ACTION_LABELS[action]}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {MODULES.map((mod) => (
+                  <tr key={mod.key} className="border-t border-border/50">
+                    <td className="py-3 pr-4 font-medium">{mod.label}</td>
+                    {ACTIONS.map((action) => (
+                      <td key={action} className="text-center py-3 px-3">
+                        <Checkbox
+                          checked={permMatrix[mod.key][action]}
+                          onCheckedChange={() => togglePermission(mod.key, action)}
+                        />
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={closeDialogs} disabled={isSavingPerms}>
+              Cancel
+            </Button>
+            <Button onClick={handleSavePermissions} disabled={isSavingPerms}>
+              {isSavingPerms ? "Saving..." : "Save Permissions"}
             </Button>
           </DialogFooter>
         </DialogContent>

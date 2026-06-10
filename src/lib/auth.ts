@@ -4,6 +4,11 @@ import { db } from "@/lib/db";
 import bcrypt from "bcryptjs";
 import { loginSchema } from "@/lib/validations/auth.schema";
 import type { UserRole } from "@/types";
+import {
+  computeEffectivePermissions,
+  getPermissionsFromRole,
+  type PermissionMatrix,
+} from "@/lib/permissions";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
@@ -32,10 +37,29 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id ?? "";
         token.role = (user as { role: UserRole }).role;
+
+        // Fetch groups and compute permission matrix on sign-in
+        const groups = await db.userGroup.findMany({
+          where: {
+            members: { some: { userId: user.id as string } },
+            isActive: true,
+          },
+          select: { id: true, name: true, permissions: true },
+        });
+
+        if (groups.length > 0) {
+          token.groups = groups.map(g => ({ id: g.id, name: g.name }));
+          token.permissionMatrix = computeEffectivePermissions(
+            groups.map(g => g.permissions as Partial<PermissionMatrix>)
+          );
+        } else {
+          token.groups = [];
+          token.permissionMatrix = getPermissionsFromRole(token.role as string);
+        }
       }
       return token;
     },
@@ -43,6 +67,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (token) {
         session.user.id = token.id as string;
         session.user.role = token.role as UserRole;
+        session.user.permissionMatrix = token.permissionMatrix as PermissionMatrix;
+        session.user.groups = (token.groups as { id: string; name: string }[]) ?? [];
       }
       return session;
     },

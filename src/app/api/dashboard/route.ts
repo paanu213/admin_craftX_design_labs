@@ -1,8 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+import { canDo } from "@/lib/permissions";
 
 export async function GET() {
   try {
@@ -11,7 +10,8 @@ export async function GET() {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const isAdmin = ADMIN_ROLES.includes(session.user.role);
+    const matrix = session.user.permissionMatrix;
+    const isAdmin = canDo(matrix, 'reports', 'read');
     const ownFilter = isAdmin ? {} : { createdById: session.user.id };
 
     const now = new Date();

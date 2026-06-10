@@ -3,9 +3,10 @@ import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { updateUserApiSchema } from "@/lib/validations/auth.schema";
+import { canDo } from "@/lib/permissions";
 
 const updateUserWithGroupSchema = updateUserApiSchema.extend({
-  groupId: z.string().nullable().optional(),
+  groupIds: z.array(z.string()).nullable().optional(),
 });
 
 const userSelect = {
@@ -17,9 +18,10 @@ const userSelect = {
   isActive: true,
   createdAt: true,
   updatedAt: true,
-  groupId: true,
-  group: {
-    select: { id: true, name: true, defaultRole: true },
+  groupMemberships: {
+    select: {
+      group: { select: { id: true, name: true } },
+    },
   },
 } as const;
 
@@ -33,7 +35,8 @@ export async function GET(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -65,7 +68,8 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -86,28 +90,51 @@ export async function PUT(
       );
     }
 
-    // Resolve role from group if groupId is being set
-    let resolvedRole = result.data.role;
-    if (result.data.groupId !== undefined && result.data.groupId !== null) {
-      const group = await db.userGroup.findUnique({ where: { id: result.data.groupId } });
-      if (!group) {
-        return NextResponse.json({ error: "Group not found" }, { status: 404 });
+    // Validate group IDs if provided
+    if (result.data.groupIds && result.data.groupIds.length > 0) {
+      for (const groupId of result.data.groupIds) {
+        const group = await db.userGroup.findUnique({ where: { id: groupId } });
+        if (!group) {
+          return NextResponse.json({ error: `Group not found: ${groupId}` }, { status: 404 });
+        }
       }
-      resolvedRole = group.defaultRole;
     }
 
     const updated = await db.user.update({
       where: { id },
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
-        ...(resolvedRole !== undefined && {
-          role: resolvedRole as Parameters<typeof db.user.update>[0]["data"]["role"],
+        ...(result.data.role !== undefined && {
+          role: result.data.role as Parameters<typeof db.user.update>[0]["data"]["role"],
         }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
-        ...(result.data.groupId !== undefined && { groupId: result.data.groupId }),
       },
       select: userSelect,
     });
+
+    // Update group memberships if groupIds provided
+    if (result.data.groupIds !== undefined) {
+      // Delete existing memberships
+      await db.userGroupMember.deleteMany({ where: { userId: id } });
+
+      // Create new memberships
+      if (result.data.groupIds && result.data.groupIds.length > 0) {
+        await db.userGroupMember.createMany({
+          data: result.data.groupIds.map((groupId) => ({
+            userId: id,
+            groupId,
+          })),
+          skipDuplicates: true,
+        });
+      }
+
+      // Re-fetch with updated memberships
+      const updatedWithGroups = await db.user.findUnique({
+        where: { id },
+        select: userSelect,
+      });
+      return NextResponse.json(updatedWithGroups);
+    }
 
     return NextResponse.json(updated);
   } catch (error) {
@@ -126,7 +153,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (session.user.role !== "SUPER_ADMIN") {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'users', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

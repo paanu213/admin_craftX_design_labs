@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import { PageHeader } from "@/components/layout/PageWrapper";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
@@ -31,14 +32,26 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { getInitials, ROLE_LABELS, formatDate } from "@/lib/utils";
-import type { SafeUser, UserGroup, UserRole } from "@/types";
+import type { UserGroup, UserRole } from "@/types";
+
+interface SafeUserWithGroups {
+  id: string;
+  name: string;
+  email: string;
+  role: UserRole;
+  avatar: string | null;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+  groupMemberships: { group: { id: string; name: string } }[];
+}
 
 export function UsersContent() {
   const queryClient = useQueryClient();
   const [showCreate, setShowCreate] = useState(false);
-  const [selectedGroupId, setSelectedGroupId] = useState<string>("none");
+  const [selectedGroupIds, setSelectedGroupIds] = useState<string[]>([]);
 
-  const { data: users, isLoading } = useQuery<SafeUser[]>({
+  const { data: users, isLoading } = useQuery<SafeUserWithGroups[]>({
     queryKey: ["users"],
     queryFn: () => fetch("/api/users").then((r) => r.json()),
   });
@@ -59,14 +72,10 @@ export function UsersContent() {
     defaultValues: { role: "CEO" },
   });
 
-  function handleGroupSelect(groupId: string) {
-    setSelectedGroupId(groupId);
-    if (groupId !== "none") {
-      const group = groups?.find((g) => g.id === groupId);
-      if (group) {
-        setValue("role", group.defaultRole as CreateUserFormData["role"]);
-      }
-    }
+  function toggleGroupSelection(groupId: string) {
+    setSelectedGroupIds((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
+    );
   }
 
   async function onCreateUser(data: CreateUserFormData) {
@@ -75,10 +84,8 @@ export function UsersContent() {
       email: data.email,
       password: data.password,
       role: data.role,
+      groupIds: selectedGroupIds,
     };
-    if (selectedGroupId !== "none") {
-      payload.groupId = selectedGroupId;
-    }
 
     const res = await fetch("/api/users", {
       method: "POST",
@@ -94,12 +101,12 @@ export function UsersContent() {
 
     toast.success("User created successfully");
     setShowCreate(false);
-    setSelectedGroupId("none");
+    setSelectedGroupIds([]);
     reset();
     queryClient.invalidateQueries({ queryKey: ["users"] });
   }
 
-  async function toggleActive(user: SafeUser) {
+  async function toggleActive(user: SafeUserWithGroups) {
     const res = await fetch(`/api/users/${user.id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
@@ -117,16 +124,18 @@ export function UsersContent() {
   function handleDialogClose(open: boolean) {
     if (!open) {
       setShowCreate(false);
-      setSelectedGroupId("none");
+      setSelectedGroupIds([]);
       reset();
     }
   }
+
+  const activeGroups = groups?.filter((g) => g.isActive) ?? [];
 
   return (
     <div className="space-y-4">
       <PageHeader
         title="User Management"
-        description="Manage team members and their access roles (Super Admin only)"
+        description="Manage team members and their access roles"
         actions={
           <Button onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4" />
@@ -177,11 +186,11 @@ export function UsersContent() {
                     <Badge variant="secondary">
                       {ROLE_LABELS[user.role]}
                     </Badge>
-                    {user.group && (
-                      <Badge variant="outline" className="text-xs">
-                        {user.group.name}
+                    {user.groupMemberships?.map((m) => (
+                      <Badge key={m.group.id} variant="outline" className="text-xs">
+                        {m.group.name}
                       </Badge>
-                    )}
+                    ))}
                     <p className="text-xs text-muted-foreground hidden md:block">
                       Joined {formatDate(user.createdAt)}
                     </p>
@@ -238,31 +247,34 @@ export function UsersContent() {
               )}
             </div>
 
-            {/* User Group (optional) - above Role */}
-            <div className="space-y-2">
-              <Label>User Group</Label>
-              <Select
-                value={selectedGroupId}
-                onValueChange={handleGroupSelect}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="No group" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No group</SelectItem>
-                  {groups
-                    ?.filter((g) => g.isActive)
-                    .map((group) => (
-                      <SelectItem key={group.id} value={group.id}>
+            {/* User Groups (multi-select with checkboxes) */}
+            {activeGroups.length > 0 && (
+              <div className="space-y-2">
+                <Label>User Groups</Label>
+                <div className="border border-border rounded-md p-3 space-y-2 max-h-36 overflow-y-auto">
+                  {activeGroups.map((group) => (
+                    <div key={group.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`group-${group.id}`}
+                        checked={selectedGroupIds.includes(group.id)}
+                        onCheckedChange={() => toggleGroupSelection(group.id)}
+                      />
+                      <label
+                        htmlFor={`group-${group.id}`}
+                        className="text-sm cursor-pointer select-none"
+                      >
                         {group.name}
-                      </SelectItem>
-                    ))}
-                </SelectContent>
-              </Select>
-              <p className="text-xs text-muted-foreground">
-                Selecting a group will set the role to the group&apos;s default role
-              </p>
-            </div>
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {selectedGroupIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {selectedGroupIds.length} group{selectedGroupIds.length !== 1 ? "s" : ""} selected
+                  </p>
+                )}
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label>Role *</Label>

@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { expenseSchema } from "@/lib/validations/expense.schema";
-
-const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+import { canDo } from "@/lib/permissions";
 
 export async function GET(
   _request: NextRequest,
@@ -50,6 +49,7 @@ export async function PUT(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const matrix = session.user.permissionMatrix;
     const { id } = await params;
     const body = await request.json();
 
@@ -66,8 +66,8 @@ export async function PUT(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    const isAdmin = ADMIN_ROLES.includes(session.user.role);
-    if (!isAdmin && existing.createdById !== session.user.id) {
+    const canEdit = canDo(matrix, 'expenses', 'update');
+    if (!canEdit && existing.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -111,6 +111,7 @@ export async function DELETE(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const matrix = session.user.permissionMatrix;
     const { id } = await params;
 
     const existing = await db.expense.findUnique({ where: { id } });
@@ -118,8 +119,8 @@ export async function DELETE(
       return NextResponse.json({ error: "Expense not found" }, { status: 404 });
     }
 
-    const isAdminForDelete = ADMIN_ROLES.includes(session.user.role);
-    if (!isAdminForDelete && existing.createdById !== session.user.id) {
+    const canDelete = canDo(matrix, 'expenses', 'delete');
+    if (!canDelete && existing.createdById !== session.user.id) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

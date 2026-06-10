@@ -24,9 +24,8 @@ import { addDays } from "date-fns";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { generateKeySchema } from "@/lib/validations/payment.schema";
+import { canDo } from "@/lib/permissions";
 import type { KeyType, PaymentMethod, PaymentReceiver } from "@/generated/prisma/enums";
-
-const GENERATE_ROLES = ["SUPER_ADMIN", "CEO"];
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -71,9 +70,10 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!GENERATE_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'activationKeys', 'create')) {
       return NextResponse.json(
-        { error: "Only CEO or Super Admin can generate activation keys" },
+        { error: "You do not have permission to generate activation keys" },
         { status: 403 }
       );
     }

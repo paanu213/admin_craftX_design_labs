@@ -2,25 +2,25 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { recordPaymentSchema } from "@/lib/validations/payment.schema";
+import { canDo } from "@/lib/permissions";
 import type { PaymentMethod, PaymentReceiver, PaymentStatus } from "@/generated/prisma/enums";
-
-const APPROVE_ROLES = ["SUPER_ADMIN", "CEO"];
 
 export async function GET(request: NextRequest) {
   try {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const matrix = session.user.permissionMatrix;
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get("clientId");
     const status = searchParams.get("status");
 
-    const isCEO = APPROVE_ROLES.includes(session.user.role);
+    const canApprove = canDo(matrix, 'payments', 'update');
 
     const where: Record<string, unknown> = {};
 
-    // Non-CEO users see only their own recorded payments
-    if (!isCEO) {
+    // Users without approve permission see only their own recorded payments
+    if (!canApprove) {
       where.recordedById = session.user.id;
     }
 
@@ -55,6 +55,11 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'payments', 'create')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
     const body = await request.json();
     const result = recordPaymentSchema.safeParse(body);
     if (!result.success) {
@@ -79,11 +84,11 @@ export async function POST(request: NextRequest) {
     const client = await db.client.findUnique({ where: { id: clientId } });
     if (!client) return NextResponse.json({ error: "Client not found" }, { status: 404 });
 
-    const isCEO = APPROVE_ROLES.includes(session.user.role);
+    const canApprove = canDo(matrix, 'payments', 'update');
 
-    // CEO/SUPER_ADMIN auto-approve; employee: PENDING_DEPOSIT for employee-received, PENDING_APPROVAL for company
+    // Users with approve permission auto-approve; others: PENDING_DEPOSIT for employee-received, PENDING_APPROVAL for company
     let status: PaymentStatus;
-    if (isCEO) {
+    if (canApprove) {
       status = "APPROVED";
     } else if (receivedBy === "COMPANY") {
       status = "PENDING_APPROVAL";
@@ -106,8 +111,8 @@ export async function POST(request: NextRequest) {
         isRenewal: isRenewal ?? false,
         status,
         recordedById: session.user.id,
-        approvedById: isCEO ? session.user.id : null,
-        approvedAt: isCEO ? now : null,
+        approvedById: canApprove ? session.user.id : null,
+        approvedAt: canApprove ? now : null,
       },
       include: {
         client: { select: { id: true, name: true, company: true } },
