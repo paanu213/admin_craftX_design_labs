@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { applicationSchema } from "@/lib/validations/application.schema";
-
-const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO", "CMO"];
+import { canDo } from "@/lib/permissions";
 
 export async function GET(
   _request: NextRequest,
@@ -51,7 +50,8 @@ export async function PUT(
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!ADMIN_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'applications', 'update')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -110,7 +110,8 @@ export async function DELETE(
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!["SUPER_ADMIN", "CEO"].includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'applications', 'delete')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

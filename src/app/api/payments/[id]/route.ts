@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const APPROVE_ROLES = ["SUPER_ADMIN", "CEO"];
+import { canDo } from "@/lib/permissions";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("deposit") }),
@@ -52,6 +51,7 @@ export async function PATCH(
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    const matrix = session.user.permissionMatrix;
     const { id } = await params;
 
     const payment = await db.payment.findUnique({ where: { id } });
@@ -90,8 +90,8 @@ export async function PATCH(
     }
 
     if (action === "approve" || action === "reject") {
-      if (!APPROVE_ROLES.includes(session.user.role)) {
-        return NextResponse.json({ error: "Only CEO or Super Admin can approve payments" }, { status: 403 });
+      if (!canDo(matrix, 'payments', 'update')) {
+        return NextResponse.json({ error: "You do not have permission to approve payments" }, { status: 403 });
       }
       if (payment.status !== "PENDING_APPROVAL") {
         return NextResponse.json({ error: "Payment is not pending approval" }, { status: 400 });

@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const REVOKE_ROLES = ["SUPER_ADMIN", "CEO"];
+import { canDo } from "@/lib/permissions";
 
 // GET - get key for a specific client (any logged-in user)
 export async function GET(
@@ -31,7 +30,7 @@ export async function GET(
   }
 }
 
-// DELETE - revoke key (CEO / SUPER_ADMIN only)
+// DELETE - revoke key (users with activationKeys delete permission)
 export async function DELETE(
   _req: NextRequest,
   { params }: { params: Promise<{ clientId: string }> }
@@ -39,8 +38,10 @@ export async function DELETE(
   try {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    if (!REVOKE_ROLES.includes(session.user.role)) {
-      return NextResponse.json({ error: "Only CEO or Super Admin can revoke keys" }, { status: 403 });
+
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'activationKeys', 'delete')) {
+      return NextResponse.json({ error: "You do not have permission to revoke keys" }, { status: 403 });
     }
 
     const { clientId } = await params;

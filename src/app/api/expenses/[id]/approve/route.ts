@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { z } from "zod";
-
-const FOUNDER_ROLES = ["CEO", "CTO", "CFO", "COO", "CMO", "SUPER_ADMIN"];
+import { canDo } from "@/lib/permissions";
 
 const decisionSchema = z.object({
   decision: z.enum(["APPROVED", "REJECTED"]),
@@ -26,8 +25,9 @@ export async function POST(
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!FOUNDER_ROLES.includes(session.user.role)) {
-      return NextResponse.json({ error: "Only founders can approve expenses" }, { status: 403 });
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'expenses', 'update')) {
+      return NextResponse.json({ error: "You do not have permission to approve expenses" }, { status: 403 });
     }
 
     const { id } = await params;
@@ -55,13 +55,13 @@ export async function POST(
 
     const { decision, note } = result.data;
 
-    // Find this founder's approval record — if none exists (e.g. the creator or late-added founder), create one
+    // Find this user's approval record — if none exists (e.g. the creator or late-added user), create one
     const existing = await db.expenseApproval.findUnique({
       where: { expenseId_approverId: { expenseId: id, approverId: session.user.id } },
     });
 
     if (!existing) {
-      // Creator or someone without a pre-created record shouldn't be reviewing their own expense
+      // Creator shouldn't be reviewing their own expense
       if (expense.createdById === session.user.id) {
         return NextResponse.json({ error: "You cannot approve your own expense" }, { status: 403 });
       }

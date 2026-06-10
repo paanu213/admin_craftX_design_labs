@@ -57,6 +57,7 @@ export interface UserGroup {
   name: string;
   description: string | null;
   isActive: boolean;
+  permissions: Record<string, Record<string, boolean>>;
   createdAt: string;
   updatedAt: string;
   _count?: { members: number };
@@ -71,8 +72,7 @@ export interface SafeUser {
   isActive: boolean;
   createdAt: Date;
   updatedAt: Date;
-  groupId?: string | null;
-  group?: { id: string; name: string } | null;
+  groupMemberships: { group: { id: string; name: string } }[];
 }
 
 export interface ClientWithRelations {

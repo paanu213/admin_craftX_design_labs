@@ -6,7 +6,7 @@ import { db } from "@/lib/db";
 // Checks whether each new DB table is reachable and returns errors if not
 export async function GET() {
   const session = await auth();
-  if (!session || !["CEO", "SUPER_ADMIN"].includes(session.user.role)) {
+  if (!session || !session.user.permissionMatrix) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

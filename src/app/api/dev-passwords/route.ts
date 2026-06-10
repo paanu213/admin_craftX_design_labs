@@ -2,9 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { randomBytes, createHash } from "crypto";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-
-const GENERATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
-const ADMIN_ROLES = ["SUPER_ADMIN", "CEO"];
+import { canDo } from "@/lib/permissions";
 
 const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
 
@@ -25,15 +23,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const matrix = session.user.permissionMatrix;
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get("clientId");
 
-    const isAdmin = ADMIN_ROLES.includes(session.user.role);
+    const canSeeAll = canDo(matrix, 'devAccess', 'create');
 
     const passwords = await db.devAccessPassword.findMany({
       where: {
         ...(clientId ? { clientId } : {}),
-        ...(!isAdmin ? { generatedById: session.user.id } : {}),
+        ...(!canSeeAll ? { generatedById: session.user.id } : {}),
       },
       orderBy: { createdAt: "desc" },
       select: {
@@ -64,7 +63,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!GENERATE_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'devAccess', 'create')) {
       return NextResponse.json(
         { error: "You do not have permission to generate dev access passwords" },
         { status: 403 }

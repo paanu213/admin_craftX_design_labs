@@ -1,22 +1,20 @@
 "use client";
 
 import { useSession } from "next-auth/react";
-import { hasPermission, type Permission } from "@/lib/permissions";
-import type { UserRole } from "@/types";
+import { can as checkPermission, type Permission } from "@/lib/permissions";
 
 export function usePermissions() {
   const { data: session } = useSession();
-  const role = session?.user?.role as UserRole | undefined;
 
   const can = (permission: Permission): boolean => {
-    if (!role) return false;
-    return hasPermission(role, permission);
+    if (!session?.user?.permissionMatrix) return false;
+    return checkPermission(session.user.permissionMatrix, permission);
   };
 
   const canAny = (permissions: Permission[]): boolean => {
-    if (!role) return false;
-    return permissions.some((p) => hasPermission(role, p));
+    if (!session?.user?.permissionMatrix) return false;
+    return permissions.some((p) => checkPermission(session.user.permissionMatrix, p));
   };
 
-  return { can, canAny, role };
+  return { can, canAny, role: session?.user?.role };
 }

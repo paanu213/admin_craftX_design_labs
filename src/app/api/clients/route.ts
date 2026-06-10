@@ -2,9 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { clientSchema } from "@/lib/validations/client.schema";
+import { canDo } from "@/lib/permissions";
 import type { ClientStatus } from "@/generated/prisma/enums";
-
-const ALLOWED_CREATE_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
 
 function periodFilter(period: string | null): { gte?: Date; lt?: Date } | undefined {
   if (!period || period === "all") return undefined;
@@ -90,7 +89,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    if (!ALLOWED_CREATE_ROLES.includes(session.user.role)) {
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'clients', 'create')) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

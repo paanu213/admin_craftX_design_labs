@@ -2,8 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { applicationSchema } from "@/lib/validations/application.schema";
-
-const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
+import { canDo } from "@/lib/permissions";
 
 export async function GET(request: NextRequest) {
   try {
@@ -60,8 +59,10 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const isAdmin = ADMIN_ROLES.includes(session.user.role) || session.user.role === "CMO";
-    if (!isAdmin) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    const matrix = session.user.permissionMatrix;
+    if (!canDo(matrix, 'applications', 'create')) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
 
     const body = await request.json();
     const result = applicationSchema.safeParse(body);
