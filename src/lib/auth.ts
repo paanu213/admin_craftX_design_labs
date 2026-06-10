@@ -7,6 +7,7 @@ import type { UserRole } from "@/types";
 import {
   computeEffectivePermissions,
   getPermissionsFromRole,
+  FULL_PERMISSIONS,
   type PermissionMatrix,
 } from "@/lib/permissions";
 
@@ -61,6 +62,11 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
           } else {
             token.groups = [];
             token.permissionMatrix = getPermissionsFromRole(token.role as string);
+          }
+
+          // SUPER_ADMIN role always gets full access regardless of group config
+          if (token.role === 'SUPER_ADMIN') {
+            token.permissionMatrix = FULL_PERMISSIONS;
           }
         } catch {
           token.groups = [];
