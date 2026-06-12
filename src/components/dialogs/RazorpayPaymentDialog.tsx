@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
-import { Loader2, AlertCircle, Link2 } from "lucide-react";
+import { Loader2, Link2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -30,27 +30,33 @@ export function RazorpayPaymentDialog({
   onSuccess,
 }: RazorpayPaymentDialogProps) {
   const sub = client.subscription;
-  const [amount, setAmount] = useState(sub ? String(Number(sub.price)) : "");
-  const [description, setDescription] = useState(
-    sub ? `${sub.planName ?? "Subscription"} payment` : ""
-  );
+
+  // amount is derived from subscription — not user-editable
+  const amount = sub ? Number(sub.price) : 0;
+
+  const [description, setDescription] = useState("");
   const [isCreating, setIsCreating] = useState(false);
-  const [amountError, setAmountError] = useState("");
+
+  // Sync description when the dialog opens (in case subscription data loaded
+  // after the component first mounted, which causes blank state on first open)
+  /* eslint-disable react-hooks/set-state-in-effect */
+  useEffect(() => {
+    if (open) {
+      setDescription(sub ? `${sub.planName ?? "Subscription"} payment` : "");
+    }
+  }, [open, sub]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function handleClose() {
     onOpenChange(false);
-    setAmount(sub ? String(Number(sub.price)) : "");
-    setDescription(sub ? `${sub.planName ?? "Subscription"} payment` : "");
-    setAmountError("");
   }
 
   async function handleCreate() {
-    const n = Number(amount);
-    if (!amount || isNaN(n) || n <= 0) {
-      setAmountError("Enter a valid amount greater than 0");
+    // Amount is read-only from subscription; guard against negative edge cases
+    if (amount < 0) {
+      toast.error("Amount cannot be negative");
       return;
     }
-    setAmountError("");
     setIsCreating(true);
     try {
       const res = await fetch("/api/razorpay/payment-link", {
@@ -59,7 +65,7 @@ export function RazorpayPaymentDialog({
         body: JSON.stringify({
           clientId: client.id,
           subscriptionId: sub?.id ?? null,
-          amount: n,
+          amount,
           currency: sub?.currency ?? "INR",
           description: description.trim() || undefined,
         }),
@@ -99,35 +105,19 @@ export function RazorpayPaymentDialog({
         <div className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="rzp-amount">
-              Amount *{" "}
+              Amount{" "}
               <span className="text-xs text-muted-foreground font-normal">
-                ({sub?.currency ?? "INR"})
+                ({sub?.currency ?? "INR"}) — from subscription
               </span>
             </Label>
             <Input
               id="rzp-amount"
               type="number"
-              step="0.01"
-              min="0"
-              placeholder="0.00"
               value={amount}
-              aria-invalid={!!amountError}
-              onChange={(e) => {
-                setAmount(e.target.value);
-                if (amountError) setAmountError("");
-              }}
-              onBlur={() => {
-                const n = Number(amount);
-                if (!amount || isNaN(n) || n <= 0)
-                  setAmountError("Enter a valid amount greater than 0");
-              }}
+              readOnly
+              className="bg-muted/50 cursor-not-allowed"
+              tabIndex={-1}
             />
-            {amountError && (
-              <p className="flex items-center gap-1 text-xs text-destructive">
-                <AlertCircle className="h-3 w-3 shrink-0" />
-                {amountError}
-              </p>
-            )}
           </div>
 
           <div className="space-y-1.5">
