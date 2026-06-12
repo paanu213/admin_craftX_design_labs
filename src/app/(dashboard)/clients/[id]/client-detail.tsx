@@ -74,6 +74,7 @@ import {
   PAYMENT_STATUS_VARIANT,
   KEY_TYPE_LABELS,
 } from "@/lib/utils";
+import { canDo } from "@/lib/permissions";
 import type { ClientWithRelations, Payment, RazorpayPaymentLink } from "@/types";
 import { useSession } from "next-auth/react";
 
@@ -354,7 +355,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     .join(", ");
 
   const ak = client.activationKey;
-  const isCEO = ["CEO", "SUPER_ADMIN"].includes(session?.user?.role ?? "");
+  const isCEO = !!(session?.user?.permissionMatrix && canDo(session.user.permissionMatrix, "payments", "update"));
 
   const hasApprovedPayment = payments?.some(p => p.status === "APPROVED") ?? false;
   const hasSubscription = !!client.subscription;

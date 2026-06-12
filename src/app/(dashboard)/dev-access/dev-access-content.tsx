@@ -20,8 +20,6 @@ import {
 } from "@/lib/utils";
 import type { DevAccessPassword } from "@/types";
 
-const FOUNDER_ROLES = ["SUPER_ADMIN", "CEO"];
-
 function getPasswordStatus(record: DevAccessPassword): "ACTIVE" | "USED" | "EXPIRED" {
   if (record.usedAt) return "USED";
   if (new Date(record.expiresAt) < new Date()) return "EXPIRED";
@@ -29,12 +27,12 @@ function getPasswordStatus(record: DevAccessPassword): "ACTIVE" | "USED" | "EXPI
 }
 
 interface DevAccessContentProps {
-  userRole: string;
+  canGenerate: boolean;
   userId: string;
 }
 
-export function DevAccessContent({ userRole }: DevAccessContentProps) {
-  const isFounder = FOUNDER_ROLES.includes(userRole);
+export function DevAccessContent({ canGenerate }: DevAccessContentProps) {
+  const isFounder = canGenerate;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
 

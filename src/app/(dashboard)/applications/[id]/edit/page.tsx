@@ -4,6 +4,7 @@ import { Header } from "@/components/layout/Header";
 import { PageWrapper } from "@/components/layout/PageWrapper";
 import { ApplicationForm } from "@/components/forms/ApplicationForm";
 import { db } from "@/lib/db";
+import { canDo } from "@/lib/permissions";
 import type { Application } from "@/types";
 
 export default async function EditApplicationPage({
@@ -12,8 +13,9 @@ export default async function EditApplicationPage({
   params: Promise<{ id: string }>;
 }) {
   const session = await auth();
-  const allowed = ["SUPER_ADMIN", "CEO", "CMO"];
-  if (!session || !allowed.includes(session.user.role)) redirect("/applications");
+  if (!session || !session.user.permissionMatrix || !canDo(session.user.permissionMatrix, "applications", "update")) {
+    redirect("/applications");
+  }
 
   const { id } = await params;
   const raw = await db.application.findUnique({

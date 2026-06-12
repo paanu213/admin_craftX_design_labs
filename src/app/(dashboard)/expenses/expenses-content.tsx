@@ -37,8 +37,6 @@ import {
 } from "@/lib/utils";
 import type { ExpenseStatus, ExpenseWithRelations } from "@/types";
 
-const ADMIN_ROLES = ["SUPER_ADMIN", "CEO", "CFO", "CTO"];
-
 interface SpendingSummaryItem {
   userId: string;
   name: string;
@@ -49,12 +47,14 @@ interface SpendingSummaryItem {
   pendingCount: number;
 }
 
-const ROLE_LABELS: Record<string, string> = {
+const DESIGNATION_LABELS: Record<string, string> = {
   SUPER_ADMIN: "Super Admin",
   CEO: "CEO",
   CMO: "CMO",
   CFO: "CFO",
   CTO: "CTO",
+  COO: "COO",
+  EMPLOYEE: "Employee",
 };
 
 const STATUS_VARIANT: Record<ExpenseStatus, "warning" | "success" | "destructive"> = {
@@ -70,9 +70,9 @@ interface ExpensesResponse {
 
 const PAGE_LIMIT = 12;
 
-export function ExpensesContent({ userRole }: { userRole: string }) {
+export function ExpensesContent({ canApprove }: { canApprove: boolean }) {
   const router = useRouter();
-  const isAdmin = ADMIN_ROLES.includes(userRole);
+  const isAdmin = canApprove;
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
@@ -178,7 +178,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                       <td className="px-4 py-2 font-medium">{item.name}</td>
                       {isAdmin && (
                         <td className="px-4 py-2 text-muted-foreground hidden sm:table-cell">
-                          {ROLE_LABELS[item.role] ?? item.role}
+                          {DESIGNATION_LABELS[item.role] ?? item.role}
                         </td>
                       )}
                       <td className="px-4 py-2 text-right font-semibold">{formatCurrency(item.total)}</td>

@@ -42,7 +42,7 @@ import { getInitials, ROLE_LABELS, formatDate } from "@/lib/utils";
 import type { UserGroup, UserRole } from "@/types";
 
 const PAGE_LIMIT = 12;
-const ALL_ROLES: UserRole[] = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
+const ALL_ROLES: UserRole[] = ["CEO", "COO", "CMO", "CFO", "CTO", "EMPLOYEE"];
 
 interface SafeUserWithGroups {
   id: string;
@@ -105,7 +105,7 @@ export function UsersContent() {
     formState: { errors, isSubmitting },
   } = useForm<CreateUserFormData>({
     resolver: zodResolver(createUserSchema),
-    defaultValues: { role: "CEO" },
+    defaultValues: { role: "EMPLOYEE" },
   });
 
   const allUsers = Array.isArray(users) ? users : [];
@@ -163,7 +163,7 @@ export function UsersContent() {
         }),
       });
       if (res.ok) {
-        toast.success("User updated — permission changes take effect on their next sign-in");
+        toast.success("User updated — group permission changes take effect immediately");
         setEdit(null);
         queryClient.invalidateQueries({ queryKey: ["users"] });
       } else {
@@ -256,7 +256,7 @@ export function UsersContent() {
     <div className="space-y-4">
       <PageHeader
         title="User Management"
-        description="Manage team members, roles, and group memberships"
+        description="Manage team members, designations, and group memberships"
         actions={
           <Button onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4" />
@@ -299,7 +299,7 @@ export function UsersContent() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <Badge variant={user.role === "SUPER_ADMIN" ? "default" : "secondary"}>
+                    <Badge variant="secondary">
                       {ROLE_LABELS[user.role] ?? user.role}
                     </Badge>
                     {user.groupMemberships?.map((m) => (
@@ -377,7 +377,7 @@ export function UsersContent() {
           <DialogHeader>
             <DialogTitle>Edit User</DialogTitle>
             <DialogDescription>
-              Update details for <strong>{edit?.user.name}</strong>. Role and group changes take effect on their next sign-in.
+              Update details for <strong>{edit?.user.name}</strong>. Group changes take effect immediately — designation is for display only.
             </DialogDescription>
           </DialogHeader>
 
@@ -424,9 +424,9 @@ export function UsersContent() {
                 )}
               </div>
 
-              {/* Role */}
+              {/* Designation */}
               <div className="space-y-1.5">
-                <Label>Role</Label>
+                <Label>Designation</Label>
                 <Select
                   value={edit.role}
                   onValueChange={(v) => setEdit((prev) => prev ? { ...prev, role: v as UserRole } : null)}
@@ -442,11 +442,9 @@ export function UsersContent() {
                     ))}
                   </SelectContent>
                 </Select>
-                {edit.role === "SUPER_ADMIN" && (
-                  <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md px-3 py-2">
-                    Super Admin has full access to everything, regardless of group permissions.
-                  </p>
-                )}
+                <p className="text-xs text-muted-foreground">
+                  Designation is a display label only. Access to features is controlled by User Groups.
+                </p>
               </div>
 
               {/* Group memberships */}
@@ -579,9 +577,9 @@ export function UsersContent() {
             </div>
 
             <div className="space-y-1.5">
-              <Label>Role *</Label>
+              <Label>Designation</Label>
               <Select
-                defaultValue="CEO"
+                defaultValue="EMPLOYEE"
                 onValueChange={(v) => setValue("role", v as CreateUserFormData["role"])}
               >
                 <SelectTrigger>

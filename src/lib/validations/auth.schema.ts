@@ -9,7 +9,9 @@ const strongPassword = z
   .regex(/[0-9]/, "Must contain at least one number")
   .regex(/[^A-Za-z0-9]/, "Must contain at least one special character");
 
-export const USER_ROLES = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as const;
+// These are designations (job titles), not access roles.
+// Access control is managed through User Groups, not this field.
+export const USER_ROLES = ["CEO", "COO", "CMO", "CFO", "CTO", "EMPLOYEE"] as const;
 
 export const loginSchema = z.object({
   email: z.string().email("Invalid email address"),

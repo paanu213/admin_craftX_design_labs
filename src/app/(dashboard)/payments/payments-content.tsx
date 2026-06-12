@@ -45,6 +45,7 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_VARIANT,
 } from "@/lib/utils";
+import { canDo } from "@/lib/permissions";
 import type { Payment } from "@/types";
 
 interface PaymentsResponse {
@@ -66,7 +67,7 @@ export function PaymentsContent() {
   const [rejectionNote, setRejectionNote] = useState("");
   const [isRejecting, setIsRejecting] = useState(false);
 
-  const isCEO = ["CEO", "SUPER_ADMIN"].includes(session?.user?.role ?? "");
+  const isCEO = !!(session?.user?.permissionMatrix && canDo(session.user.permissionMatrix, "payments", "update"));
 
   const { data, isLoading, isError, refetch } = useQuery<PaymentsResponse>({
     queryKey: ["payments", page, statusFilter],
