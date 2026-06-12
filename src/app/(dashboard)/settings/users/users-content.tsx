@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, UserX, UserCheck, KeyRound } from "lucide-react";
+import { Plus, UserX, UserCheck, KeyRound, MoreVertical } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema, type CreateUserFormData } from "@/lib/validations/auth.schema";
@@ -31,8 +31,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { getInitials, ROLE_LABELS, formatDate } from "@/lib/utils";
 import type { UserGroup, UserRole } from "@/types";
+
+const PAGE_LIMIT = 12;
 
 interface SafeUserWithGroups {
   id: string;
@@ -54,6 +63,7 @@ export function UsersContent() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmNewPassword, setConfirmNewPassword] = useState("");
   const [isResetting, setIsResetting] = useState(false);
+  const [page, setPage] = useState(1);
 
   const { data: users, isLoading } = useQuery<SafeUserWithGroups[]>({
     queryKey: ["users"],
@@ -76,6 +86,10 @@ export function UsersContent() {
     defaultValues: { role: "CEO" },
   });
 
+  const allUsers = users ?? [];
+  const totalPages = Math.ceil(allUsers.length / PAGE_LIMIT);
+  const pagedUsers = allUsers.slice((page - 1) * PAGE_LIMIT, page * PAGE_LIMIT);
+
   function toggleGroupSelection(groupId: string) {
     setSelectedGroupIds((prev) =>
       prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
@@ -83,18 +97,16 @@ export function UsersContent() {
   }
 
   async function onCreateUser(data: CreateUserFormData) {
-    const payload: Record<string, unknown> = {
-      name: data.name,
-      email: data.email,
-      password: data.password,
-      role: data.role,
-      groupIds: selectedGroupIds,
-    };
-
     const res = await fetch("/api/users", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      body: JSON.stringify({
+        name: data.name,
+        email: data.email,
+        password: data.password,
+        role: data.role,
+        groupIds: selectedGroupIds,
+      }),
     });
 
     if (!res.ok) {
@@ -187,17 +199,14 @@ export function UsersContent() {
                 <Skeleton key={i} className="h-16" />
               ))}
             </div>
-          ) : !users?.length ? (
+          ) : !allUsers.length ? (
             <div className="flex flex-col items-center justify-center py-16">
               <p className="text-muted-foreground text-sm">No users found</p>
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {users.map((user) => (
-                <div
-                  key={user.id}
-                  className="flex items-center justify-between px-4 py-4"
-                >
+              {pagedUsers.map((user) => (
+                <div key={user.id} className="flex items-center justify-between px-4 py-4">
                   <div className="flex items-center gap-3">
                     <Avatar className="h-9 w-9">
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
@@ -208,9 +217,7 @@ export function UsersContent() {
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium">{user.name}</p>
                         {!user.isActive && (
-                          <Badge variant="muted" className="text-xs">
-                            Inactive
-                          </Badge>
+                          <Badge variant="muted" className="text-xs">Inactive</Badge>
                         )}
                       </div>
                       <p className="text-xs text-muted-foreground">{user.email}</p>
@@ -218,9 +225,7 @@ export function UsersContent() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <Badge variant="secondary">
-                      {ROLE_LABELS[user.role]}
-                    </Badge>
+                    <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
                     {user.groupMemberships?.map((m) => (
                       <Badge key={m.group.id} variant="outline" className="text-xs">
                         {m.group.name}
@@ -229,28 +234,33 @@ export function UsersContent() {
                     <p className="text-xs text-muted-foreground hidden md:block">
                       Joined {formatDate(user.createdAt)}
                     </p>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => setResetPasswordUser(user)}
-                      title="Reset password"
-                    >
-                      <KeyRound className="h-4 w-4 text-muted-foreground" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => toggleActive(user)}
-                      title={user.isActive ? "Deactivate user" : "Activate user"}
-                    >
-                      {user.isActive ? (
-                        <UserX className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <UserCheck className="h-4 w-4 text-emerald-600" />
-                      )}
-                    </Button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8">
+                          <MoreVertical className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => setResetPasswordUser(user)}>
+                          <KeyRound className="h-4 w-4 mr-2" />
+                          Reset Password
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem onClick={() => toggleActive(user)}>
+                          {user.isActive ? (
+                            <>
+                              <UserX className="h-4 w-4 mr-2 text-destructive" />
+                              <span className="text-destructive">Deactivate</span>
+                            </>
+                          ) : (
+                            <>
+                              <UserCheck className="h-4 w-4 mr-2 text-emerald-600" />
+                              <span className="text-emerald-600">Activate</span>
+                            </>
+                          )}
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
               ))}
@@ -258,6 +268,22 @@ export function UsersContent() {
           )}
         </CardContent>
       </Card>
+
+      {totalPages > 1 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
+          <p className="text-muted-foreground text-center sm:text-left">
+            Showing {(page - 1) * PAGE_LIMIT + 1}–{Math.min(page * PAGE_LIMIT, allUsers.length)} of {allUsers.length} users
+          </p>
+          <div className="flex gap-2 justify-center sm:justify-end">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+              Previous
+            </Button>
+            <Button variant="outline" size="sm" disabled={page === totalPages} onClick={() => setPage(page + 1)}>
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
 
       {/* Reset Password Dialog */}
       <Dialog
@@ -273,9 +299,7 @@ export function UsersContent() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Reset Password for {resetPasswordUser?.name}</DialogTitle>
-            <DialogDescription>
-              Enter a new password for this user.
-            </DialogDescription>
+            <DialogDescription>Enter a new password for this user.</DialogDescription>
           </DialogHeader>
           <div className="space-y-4">
             <div className="space-y-2">
@@ -323,34 +347,22 @@ export function UsersContent() {
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New User</DialogTitle>
-            <DialogDescription>
-              Add a new team member to the admin portal
-            </DialogDescription>
+            <DialogDescription>Add a new team member to the admin portal</DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleSubmit(onCreateUser)} className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="name">Full Name *</Label>
               <Input id="name" placeholder="Jane Doe" {...register("name")} />
-              {errors.name && (
-                <p className="text-xs text-destructive">{errors.name.message}</p>
-              )}
+              {errors.name && <p className="text-xs text-destructive">{errors.name.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="email">Email Address *</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="jane@craftxlabs.com"
-                {...register("email")}
-              />
-              {errors.email && (
-                <p className="text-xs text-destructive">{errors.email.message}</p>
-              )}
+              <Input id="email" type="email" placeholder="jane@craftxlabs.com" {...register("email")} />
+              {errors.email && <p className="text-xs text-destructive">{errors.email.message}</p>}
             </div>
 
-            {/* User Groups (multi-select with checkboxes) */}
             {activeGroups.length > 0 && (
               <div className="space-y-2">
                 <Label>User Groups</Label>
@@ -362,10 +374,7 @@ export function UsersContent() {
                         checked={selectedGroupIds.includes(group.id)}
                         onCheckedChange={() => toggleGroupSelection(group.id)}
                       />
-                      <label
-                        htmlFor={`group-${group.id}`}
-                        className="text-sm cursor-pointer select-none"
-                      >
+                      <label htmlFor={`group-${group.id}`} className="text-sm cursor-pointer select-none">
                         {group.name}
                       </label>
                     </div>
@@ -383,59 +392,37 @@ export function UsersContent() {
               <Label>Role *</Label>
               <Select
                 defaultValue="CEO"
-                onValueChange={(v) =>
-                  setValue("role", v as CreateUserFormData["role"])
-                }
+                onValueChange={(v) => setValue("role", v as CreateUserFormData["role"])}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[]).map(
-                    (role) => (
-                      <SelectItem key={role} value={role}>
-                        {ROLE_LABELS[role]}
-                      </SelectItem>
-                    )
-                  )}
+                  {(["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[]).map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_LABELS[role]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="password">Password *</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="Min. 8 characters"
-                {...register("password")}
-              />
-              {errors.password && (
-                <p className="text-xs text-destructive">{errors.password.message}</p>
-              )}
+              <Input id="password" type="password" placeholder="Min. 8 characters" {...register("password")} />
+              {errors.password && <p className="text-xs text-destructive">{errors.password.message}</p>}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirmPassword">Confirm Password *</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="Repeat password"
-                {...register("confirmPassword")}
-              />
+              <Input id="confirmPassword" type="password" placeholder="Repeat password" {...register("confirmPassword")} />
               {errors.confirmPassword && (
-                <p className="text-xs text-destructive">
-                  {errors.confirmPassword.message}
-                </p>
+                <p className="text-xs text-destructive">{errors.confirmPassword.message}</p>
               )}
             </div>
 
             <DialogFooter className="pt-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => handleDialogClose(false)}
-              >
+              <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>

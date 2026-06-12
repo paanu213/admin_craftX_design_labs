@@ -4,7 +4,10 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Plus, Search, Filter, Eye, CheckCircle, XCircle, Trash2, TrendingUp } from "lucide-react";
+import {
+  Plus, Search, Filter, Eye, CheckCircle, XCircle, Trash2,
+  TrendingUp, MoreVertical,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -19,6 +22,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   formatCurrency,
   formatDate,
@@ -58,6 +68,8 @@ interface ExpensesResponse {
   meta: { page: number; limit: number; total: number; totalPages: number };
 }
 
+const PAGE_LIMIT = 12;
+
 export function ExpensesContent({ userRole }: { userRole: string }) {
   const router = useRouter();
   const isAdmin = ADMIN_ROLES.includes(userRole);
@@ -76,7 +88,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
     queryFn: () => {
       const params = new URLSearchParams({
         page: String(page),
-        limit: "10",
+        limit: String(PAGE_LIMIT),
         ...(search && { search }),
         ...(statusFilter !== "ALL" && { status: statusFilter }),
         ...(categoryFilter !== "ALL" && { category: categoryFilter }),
@@ -206,10 +218,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
         </div>
         <Select
           value={statusFilter}
-          onValueChange={(v) => {
-            setStatusFilter(v);
-            setPage(1);
-          }}
+          onValueChange={(v) => { setStatusFilter(v); setPage(1); }}
         >
           <SelectTrigger className="w-full sm:w-40">
             <Filter className="h-4 w-4 mr-1 text-muted-foreground" />
@@ -224,10 +233,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
         </Select>
         <Select
           value={categoryFilter}
-          onValueChange={(v) => {
-            setCategoryFilter(v);
-            setPage(1);
-          }}
+          onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}
         >
           <SelectTrigger className="w-full sm:w-44">
             <SelectValue placeholder="Category" />
@@ -257,11 +263,7 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
           ) : !data?.data?.length ? (
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <p className="text-muted-foreground text-sm">No expenses found</p>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => router.push("/expenses/new")}
-              >
+              <Button variant="outline" size="sm" onClick={() => router.push("/expenses/new")}>
                 <Plus className="h-4 w-4" />
                 Add your first expense
               </Button>
@@ -271,27 +273,13 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Expense
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                      Category
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Amount
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Added by
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Date
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Actions
-                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Expense</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Category</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Amount</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Added by</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Date</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -339,44 +327,52 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
                         <div className="flex items-center justify-end gap-1">
                           <Button
                             variant="ghost"
-                            size="icon"
-                            className="h-8 w-8"
+                            size="sm"
+                            className="h-8 gap-1.5 text-xs"
                             onClick={() => router.push(`/expenses/${expense.id}`)}
                           >
-                            <Eye className="h-4 w-4" />
+                            <Eye className="h-3.5 w-3.5" />
+                            View
                           </Button>
-                          {expense.status === "PENDING" && (
-                            <RoleGuard permission="approveExpenses">
-                              <>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-emerald-600 hover:text-emerald-700"
-                                  onClick={() => handleApprove(expense.id, "APPROVED")}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon" className="h-8 w-8">
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {expense.status === "PENDING" && (
+                                <RoleGuard permission="approveExpenses">
+                                  <>
+                                    <DropdownMenuItem
+                                      className="text-emerald-600 focus:text-emerald-700"
+                                      onClick={() => handleApprove(expense.id, "APPROVED")}
+                                    >
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Approve
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem
+                                      className="text-destructive focus:text-destructive"
+                                      onClick={() => handleApprove(expense.id, "REJECTED")}
+                                    >
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Reject
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                  </>
+                                </RoleGuard>
+                              )}
+                              <RoleGuard permission="deleteExpenses">
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onClick={() => handleDelete(expense.id, expense.title)}
                                 >
-                                  <CheckCircle className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-8 w-8 text-destructive hover:text-destructive"
-                                  onClick={() => handleApprove(expense.id, "REJECTED")}
-                                >
-                                  <XCircle className="h-4 w-4" />
-                                </Button>
-                              </>
-                            </RoleGuard>
-                          )}
-                          <RoleGuard permission="deleteExpenses">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="h-8 w-8 text-destructive hover:text-destructive"
-                              onClick={() => handleDelete(expense.id, expense.title)}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </RoleGuard>
+                                  <Trash2 className="h-4 w-4 mr-2" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </RoleGuard>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
                         </div>
                       </td>
                     </tr>
@@ -392,16 +388,11 @@ export function ExpensesContent({ userRole }: { userRole: string }) {
       {data?.meta && data.meta.totalPages > 1 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
           <p className="text-muted-foreground text-center sm:text-left">
-            Showing {(page - 1) * 10 + 1}–
-            {Math.min(page * 10, data.meta.total)} of {data.meta.total} expenses
+            Showing {(page - 1) * PAGE_LIMIT + 1}–
+            {Math.min(page * PAGE_LIMIT, data.meta.total)} of {data.meta.total} expenses
           </p>
           <div className="flex gap-2 justify-center sm:justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              disabled={page === 1}
-              onClick={() => setPage(page - 1)}
-            >
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
               Previous
             </Button>
             <Button

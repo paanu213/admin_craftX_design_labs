@@ -83,7 +83,7 @@ export function ClientsContent() {
     queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
-        limit: "10",
+        limit: "12",
         ...(search && { search }),
         ...(statusFilter !== "ALL" && { status: statusFilter }),
         ...(period !== "all" && { period }),

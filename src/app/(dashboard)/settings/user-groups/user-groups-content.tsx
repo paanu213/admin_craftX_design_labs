@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Pencil, Power, Trash2, ShieldCheck } from "lucide-react";
+import { Plus, Pencil, Power, Trash2, ShieldCheck, MoreVertical } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +21,13 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { MODULES, EMPTY_PERMISSIONS, type PermissionMatrix, type ModuleKey, type Action } from "@/lib/permissions";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import type { UserGroup } from "@/types";
 
 interface GroupFormState {
@@ -284,53 +291,36 @@ export function UserGroupsContent() {
                       <span className="text-xs text-muted-foreground hidden sm:block">
                         {memberCount} {memberCount === 1 ? "member" : "members"}
                       </span>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openPermissions(group)}
-                        title="Manage permissions"
-                      >
-                        <ShieldCheck className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => openEdit(group)}
-                        title="Edit group"
-                      >
-                        <Pencil className="h-4 w-4 text-muted-foreground" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleToggleActive(group)}
-                        title={group.isActive ? "Deactivate group" : "Activate group"}
-                      >
-                        <Power
-                          className={
-                            group.isActive
-                              ? "h-4 w-4 text-muted-foreground"
-                              : "h-4 w-4 text-emerald-600"
-                          }
-                        />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8"
-                        onClick={() => handleDelete(group)}
-                        disabled={memberCount > 0}
-                        title={
-                          memberCount > 0
-                            ? "Cannot delete a group with members"
-                            : "Delete group"
-                        }
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive/70" />
-                      </Button>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => openPermissions(group)}>
+                            <ShieldCheck className="h-4 w-4 mr-2" />
+                            Manage Permissions
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openEdit(group)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleToggleActive(group)}>
+                            <Power className={`h-4 w-4 mr-2 ${group.isActive ? "text-muted-foreground" : "text-emerald-600"}`} />
+                            {group.isActive ? "Deactivate" : "Activate"}
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem
+                            className="text-destructive focus:text-destructive"
+                            disabled={memberCount > 0}
+                            onClick={() => handleDelete(group)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            {memberCount > 0 ? "Delete (has members)" : "Delete"}
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </div>
                   </div>
                 );

@@ -104,19 +104,18 @@ export async function POST(request: NextRequest) {
 
     const data = result.data;
 
-    // Find users who can approve expenses (have expenses update permission)
-    // We look for active users who are not the creator — fallback: find users in groups with approve perm
-    // For simplicity, we create approvals for all active users with the update permission
-    // We query users with roles that historically had approve access, or we use group-based approach
-    // Since we can't efficiently query by permission matrix in DB, we fall back to finding active users
-    // who are not the current user to notify (the POST is still valid - approvals are advisory)
-    const potentialApprovers = await db.user.findMany({
+    // Approvers = all active Founders group members except the creator.
+    // - Employee submits → all founders approve
+    // - Founder submits → all OTHER founders approve (creator excluded)
+    const approverMembers = await db.userGroupMember.findMany({
       where: {
-        isActive: true,
-        NOT: { id: session.user.id },
+        group: { name: { equals: 'founders', mode: 'insensitive' }, isActive: true },
+        user: { isActive: true },
+        NOT: { userId: session.user.id },
       },
-      select: { id: true },
+      select: { userId: true },
     });
+    const potentialApprovers = approverMembers.map(m => ({ id: m.userId }));
 
     const expense = await db.expense.create({
       data: {

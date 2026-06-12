@@ -14,6 +14,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const clientId = searchParams.get("clientId");
     const status = searchParams.get("status");
+    const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+    const limit = Math.max(1, Math.min(100, Number(searchParams.get("limit") ?? 12)));
 
     const canApprove = canDo(matrix, 'payments', 'update');
 
@@ -27,22 +29,39 @@ export async function GET(request: NextRequest) {
     if (clientId) where.clientId = clientId;
     if (status) where.status = status as PaymentStatus;
 
-    const payments = await db.payment.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        client: { select: { id: true, name: true, company: true } },
-        recordedBy: { select: { id: true, name: true, role: true } },
-        approvedBy: { select: { id: true, name: true, role: true } },
-      },
-    });
+    // When clientId is given (client detail page) skip pagination and return all
+    if (clientId) {
+      const payments = await db.payment.findMany({
+        where,
+        orderBy: { createdAt: "desc" },
+        include: {
+          client: { select: { id: true, name: true, company: true } },
+          recordedBy: { select: { id: true, name: true, role: true } },
+          approvedBy: { select: { id: true, name: true, role: true } },
+        },
+      });
+      return NextResponse.json(payments.map((p) => ({ ...p, amount: Number(p.amount) })));
+    }
 
-    return NextResponse.json(
-      payments.map((p) => ({
-        ...p,
-        amount: Number(p.amount),
-      }))
-    );
+    const [payments, total] = await Promise.all([
+      db.payment.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          client: { select: { id: true, name: true, company: true } },
+          recordedBy: { select: { id: true, name: true, role: true } },
+          approvedBy: { select: { id: true, name: true, role: true } },
+        },
+      }),
+      db.payment.count({ where }),
+    ]);
+
+    return NextResponse.json({
+      data: payments.map((p) => ({ ...p, amount: Number(p.amount) })),
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error("[GET /api/payments]", error);
     const msg = error instanceof Error ? error.message : String(error);
