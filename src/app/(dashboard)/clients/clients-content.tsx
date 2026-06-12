@@ -277,6 +277,9 @@ export function ClientsContent() {
                           {/* Company */}
                         <td className="px-4 py-3">
                           <p className="font-semibold text-foreground">{client.company}</p>
+                          {client.clientCode && (
+                            <p className="text-xs font-mono text-muted-foreground">{client.clientCode}</p>
+                          )}
                         </td>
 
                         {/* Client name + mobile */}
@@ -377,8 +380,8 @@ export function ClientsContent() {
       {data?.meta && data.meta.totalPages > 1 && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
           <p className="text-muted-foreground text-center sm:text-left">
-            Showing {(page - 1) * 10 + 1}–
-            {Math.min(page * 10, data.meta.total)} of {data.meta.total} clients
+            Showing {(page - 1) * 12 + 1}–
+            {Math.min(page * 12, data.meta.total)} of {data.meta.total} clients
           </p>
           <div className="flex gap-2 justify-center sm:justify-end">
             <Button

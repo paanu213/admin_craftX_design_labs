@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { Loader2, ArrowLeft, FileText, Upload, X, ImageIcon } from "lucide-react";
+import { Loader2, ArrowLeft, FileText, Upload, X, ImageIcon, AlertCircle } from "lucide-react";
 import { expenseSchema, type ExpenseFormData } from "@/lib/validations/expense.schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -59,10 +59,12 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
     register,
     handleSubmit,
     setValue,
+    watch,
     formState: { errors, isSubmitting },
   } = useForm<ExpenseFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(expenseSchema) as any,
+    mode: "onTouched",
     defaultValues: expense
       ? {
           title: expense.title,
@@ -154,6 +156,7 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
     }
   }
 
+  const watchedDescription = watch("description") ?? "";
   const isWorking = uploading || isSubmitting;
 
   return (
@@ -181,25 +184,37 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
             </CardDescription>
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="title">Title *</Label>
-              <Input id="title" placeholder="Monthly Figma subscription" {...register("title")} />
+              <Input
+                id="title"
+                placeholder="Monthly Figma subscription"
+                maxLength={200}
+                aria-invalid={!!errors.title}
+                {...register("title")}
+              />
               {errors.title && (
-                <p className="text-xs text-destructive">{errors.title.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.title.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="amount">Amount *</Label>
               <Input
                 id="amount"
                 type="number"
                 step="0.01"
+                min="0"
                 placeholder="99.00"
+                aria-invalid={!!errors.amount}
                 {...register("amount", { valueAsNumber: true })}
               />
               {errors.amount && (
-                <p className="text-xs text-destructive">{errors.amount.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.amount.message}
+                </p>
               )}
             </div>
 
@@ -219,13 +234,13 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Category *</Label>
               <Select
                 defaultValue={expense?.category}
                 onValueChange={(v) => setValue("category", v as ExpenseFormData["category"])}
               >
-                <SelectTrigger><SelectValue placeholder="Select category" /></SelectTrigger>
+                <SelectTrigger aria-invalid={!!errors.category}><SelectValue placeholder="Select category" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="SAAS">SaaS</SelectItem>
                   <SelectItem value="PAYROLL">Payroll</SelectItem>
@@ -237,26 +252,47 @@ export function ExpenseForm({ expense, onSuccess }: ExpenseFormProps) {
                 </SelectContent>
               </Select>
               {errors.category && (
-                <p className="text-xs text-destructive">{errors.category.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.category.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="expenseDate">Expense Date *</Label>
-              <Input id="expenseDate" type="date" {...register("expenseDate")} />
+              <Input
+                id="expenseDate"
+                type="date"
+                aria-invalid={!!errors.expenseDate}
+                {...register("expenseDate")}
+              />
               {errors.expenseDate && (
-                <p className="text-xs text-destructive">{errors.expenseDate.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.expenseDate.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="description">Description</Label>
               <Textarea
                 id="description"
                 placeholder="Additional details about this expense..."
                 rows={3}
+                maxLength={1000}
+                aria-invalid={!!errors.description}
                 {...register("description")}
               />
+              <div className="flex items-center justify-between">
+                {errors.description ? (
+                  <p className="flex items-center gap-1 text-xs text-destructive">
+                    <AlertCircle className="h-3 w-3 shrink-0" />{errors.description.message}
+                  </p>
+                ) : <span />}
+                <span className={`text-xs tabular-nums ${watchedDescription.length > 850 ? "text-amber-500" : "text-muted-foreground"}`}>
+                  {watchedDescription.length}/1000
+                </span>
+              </div>
             </div>
 
             {/* Receipt Upload */}

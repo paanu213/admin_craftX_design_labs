@@ -57,6 +57,31 @@ export function sanitizeFilename(name: string): string {
     .slice(0, 80);                // cap length
 }
 
+export const IMAGE_MIME_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
+
+export async function uploadToR2(
+  buffer: Uint8Array,
+  mimeType: string,
+  folder: string
+): Promise<string> {
+  const ext = EXTENSION_MAP[mimeType] ?? "bin";
+  const key = `${folder}/${randomUUID()}.${ext}`;
+
+  const client = getR2Client();
+  await client.send(
+    new PutObjectCommand({
+      Bucket: process.env.R2_BUCKET_NAME!,
+      Key: key,
+      Body: Buffer.from(buffer),
+      ContentType: mimeType,
+      ContentDisposition: "inline",
+      CacheControl: "public, max-age=31536000, immutable",
+    })
+  );
+
+  return `${process.env.R2_PUBLIC_URL}/${key}`;
+}
+
 export async function uploadReceiptToR2(
   buffer: Uint8Array,
   originalName: string,

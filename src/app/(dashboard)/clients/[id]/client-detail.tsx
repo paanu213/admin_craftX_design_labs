@@ -29,6 +29,7 @@ import {
   XCircle,
   Banknote,
   ArrowUpCircle,
+  Link2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -47,6 +48,7 @@ import { ClientForm } from "@/components/forms/ClientForm";
 import { SubscriptionForm } from "@/components/forms/SubscriptionForm";
 import { GenerateKeyDialog } from "@/components/dialogs/GenerateKeyDialog";
 import { RecordPaymentDialog } from "@/components/dialogs/RecordPaymentDialog";
+import { RazorpayPaymentDialog } from "@/components/dialogs/RazorpayPaymentDialog";
 import {
   formatCurrency,
   formatDate,
@@ -100,6 +102,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const [generateKeyOpen, setGenerateKeyOpen] = useState(false);
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const [renewPaymentOpen, setRenewPaymentOpen] = useState(false);
+  const [razorpayOpen, setRazorpayOpen] = useState(false);
 
   // Payment action states
   const [depositingId, setDepositingId] = useState<string | null>(null);
@@ -326,6 +329,12 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             onSuccess={refetchPayments}
             isRenewal={true}
           />
+          <RazorpayPaymentDialog
+            open={razorpayOpen}
+            onOpenChange={setRazorpayOpen}
+            client={client}
+            onSuccess={refetchPayments}
+          />
         </>
       )}
 
@@ -336,8 +345,13 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold truncate">{client.name}</h2>
-            <p className="text-sm text-muted-foreground truncate">{client.company}</p>
+            <h2 className="text-xl sm:text-2xl font-bold truncate">{client.company}</h2>
+            <div className="flex items-center gap-2">
+              {client.clientCode && (
+                <span className="text-xs font-mono text-muted-foreground">{client.clientCode}</span>
+              )}
+              <span className="text-sm text-muted-foreground truncate">{client.name}</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
@@ -690,7 +704,18 @@ export function ClientDetail({ clientId }: { clientId: string }) {
               <Banknote className="h-4 w-4" />
               Payments
             </CardTitle>
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap">
+              <RoleGuard permission="recordPayments">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setRazorpayOpen(true)}
+                  className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
+                >
+                  <Link2 className="h-3.5 w-3.5" />
+                  Send Payment Link
+                </Button>
+              </RoleGuard>
               <RoleGuard permission="recordPayments">
                 <Button
                   variant="outline"

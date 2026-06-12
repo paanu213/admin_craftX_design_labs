@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import {
   subscriptionSchema,
   type SubscriptionFormData,
@@ -65,10 +65,11 @@ export function SubscriptionForm({
   } = useForm<SubscriptionFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(subscriptionSchema) as any,
+    mode: "onTouched",
     defaultValues: subscription
       ? {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
           applicationId: (subscription as any).applicationId ?? null,
-          planName: subscription.planName,
           price: Number(subscription.price),
           currency: subscription.currency as SubscriptionFormData["currency"],
           billingCycle: subscription.billingCycle,
@@ -92,6 +93,31 @@ export function SubscriptionForm({
   const watchedBillingCycle = watch("billingCycle");
   const watchedAppId = watch("applicationId");
 
+  const selectedApp = apps.find((a) => a.id === watchedAppId);
+
+  // Which billing cycles have prices for this app?
+  const availableCycles = selectedApp
+    ? ([
+        selectedApp.monthlyPrice != null ? "MONTHLY" : null,
+        selectedApp.monthlyPrice != null ? "QUARTERLY" : null, // quarterly = monthly × 3 treated as monthly price
+        selectedApp.yearlyPrice != null ? "ANNUALLY" : null,
+      ].filter(Boolean) as string[])
+    : ["MONTHLY", "QUARTERLY", "ANNUALLY"];
+
+  // Unique cycles only (MONTHLY and QUARTERLY both need monthlyPrice)
+  const uniqueCycles = selectedApp
+    ? [
+        ...(selectedApp.monthlyPrice != null ? ["MONTHLY", "QUARTERLY"] : []),
+        ...(selectedApp.yearlyPrice != null ? ["ANNUALLY"] : []),
+      ]
+    : ["MONTHLY", "QUARTERLY", "ANNUALLY"];
+
+  const CYCLE_LABELS: Record<string, string> = {
+    MONTHLY: "Monthly",
+    QUARTERLY: "Quarterly",
+    ANNUALLY: "Annually",
+  };
+
   // Auto-calculate renewal date
   useEffect(() => {
     if (!watchedStartDate) return;
@@ -99,20 +125,28 @@ export function SubscriptionForm({
     if (renewal) setValue("renewalDate", renewal);
   }, [watchedStartDate, watchedBillingCycle, setValue]);
 
-  // Auto-fill price when app or billing cycle changes
+  // Auto-fill price and currency when app or billing cycle changes
   useEffect(() => {
-    if (!watchedAppId) return;
-    const app = apps.find((a) => a.id === watchedAppId);
-    if (!app) return;
+    if (!watchedAppId || !selectedApp) return;
     const cycle = watchedBillingCycle ?? "MONTHLY";
-    if (cycle === "ANNUALLY" && app.yearlyPrice != null) {
-      setValue("price", app.yearlyPrice);
-      if (app.currency) setValue("currency", app.currency as SubscriptionFormData["currency"]);
-    } else if (app.monthlyPrice != null) {
-      setValue("price", app.monthlyPrice);
-      if (app.currency) setValue("currency", app.currency as SubscriptionFormData["currency"]);
+    if (cycle === "ANNUALLY" && selectedApp.yearlyPrice != null) {
+      setValue("price", Number(selectedApp.yearlyPrice));
+    } else if (selectedApp.monthlyPrice != null) {
+      setValue("price", Number(selectedApp.monthlyPrice));
     }
-  }, [watchedAppId, watchedBillingCycle, apps, setValue]);
+    if (selectedApp.currency) {
+      setValue("currency", selectedApp.currency as SubscriptionFormData["currency"]);
+    }
+  }, [watchedAppId, watchedBillingCycle, selectedApp, setValue]);
+
+  // If app changes and current billing cycle is not available, reset to first available
+  useEffect(() => {
+    if (!selectedApp) return;
+    if (!uniqueCycles.includes(watchedBillingCycle ?? "")) {
+      setValue("billingCycle", uniqueCycles[0] as SubscriptionFormData["billingCycle"]);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [watchedAppId]);
 
   async function onSubmit(data: SubscriptionFormData) {
     const res = await fetch(`/api/clients/${clientId}/subscription`, {
@@ -122,15 +156,14 @@ export function SubscriptionForm({
     });
 
     if (!res.ok) {
-      toast.error("Failed to save subscription");
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? "Failed to save subscription");
       return;
     }
 
     toast.success(isEditing ? "Subscription updated" : "Subscription created");
     onSuccess();
   }
-
-  const selectedApp = apps.find((a) => a.id === watchedAppId);
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -148,6 +181,7 @@ export function SubscriptionForm({
             <div className="space-y-2 sm:col-span-2">
               <Label>Application</Label>
               <Select
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
                 defaultValue={(subscription as any)?.applicationId ?? "none"}
                 onValueChange={(v) => setValue("applicationId", v === "none" ? null : v)}
               >
@@ -163,33 +197,24 @@ export function SubscriptionForm({
                   ))}
                 </SelectContent>
               </Select>
+
               {selectedApp && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedApp.monthlyPrice != null && (
-                    <span>Monthly: ₹{selectedApp.monthlyPrice}</span>
-                  )}
-                  {selectedApp.monthlyPrice != null && selectedApp.yearlyPrice != null && " · "}
-                  {selectedApp.yearlyPrice != null && (
-                    <span>Yearly: ₹{selectedApp.yearlyPrice}</span>
-                  )}
-                  {" — price auto-filled based on billing cycle"}
-                </p>
+                <div className="rounded-md border bg-muted/40 px-3 py-2 text-xs text-muted-foreground space-y-0.5">
+                  <p className="font-medium text-foreground">{selectedApp.name}</p>
+                  <div className="flex flex-wrap gap-3">
+                    {selectedApp.monthlyPrice != null && (
+                      <span>Monthly: {selectedApp.currency === "USD" ? "$" : selectedApp.currency === "EUR" ? "€" : selectedApp.currency === "GBP" ? "£" : "₹"}{Number(selectedApp.monthlyPrice).toLocaleString()}</span>
+                    )}
+                    {selectedApp.yearlyPrice != null && (
+                      <span>Yearly: {selectedApp.currency === "USD" ? "$" : selectedApp.currency === "EUR" ? "€" : selectedApp.currency === "GBP" ? "£" : "₹"}{Number(selectedApp.yearlyPrice).toLocaleString()}</span>
+                    )}
+                  </div>
+                </div>
               )}
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
-              <Label htmlFor="planName">Plan Name *</Label>
-              <Input
-                id="planName"
-                placeholder="Professional Plan"
-                {...register("planName")}
-              />
-              {errors.planName && (
-                <p className="text-xs text-destructive">{errors.planName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-2">
+            {/* Billing Cycle — dynamic based on app */}
+            <div className="space-y-1.5">
               <Label>Billing Cycle *</Label>
               <Select
                 defaultValue={subscription?.billingCycle ?? "MONTHLY"}
@@ -201,59 +226,76 @@ export function SubscriptionForm({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="MONTHLY">Monthly</SelectItem>
-                  <SelectItem value="QUARTERLY">Quarterly</SelectItem>
-                  <SelectItem value="ANNUALLY">Annually</SelectItem>
+                  {uniqueCycles.map((cycle) => (
+                    <SelectItem key={cycle} value={cycle}>
+                      {CYCLE_LABELS[cycle]}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
+              {errors.billingCycle && (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.billingCycle.message}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="price">Price *</Label>
+            {/* Price — auto-filled from app */}
+            <div className="space-y-1.5">
+              <Label htmlFor="price">
+                Price *
+                {selectedApp?.currency && (
+                  <span className="ml-1 text-xs text-muted-foreground font-normal">({selectedApp.currency})</span>
+                )}
+              </Label>
               <Input
                 id="price"
                 type="number"
                 step="0.01"
+                min="0"
                 placeholder="0.00"
+                aria-invalid={!!errors.price}
                 {...register("price", { valueAsNumber: true })}
               />
               {errors.price && (
-                <p className="text-xs text-destructive">{errors.price.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.price.message}
+                </p>
+              )}
+              {selectedApp && (
+                <p className="text-xs text-muted-foreground">
+                  Auto-filled from application pricing
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="currency">Currency</Label>
-              <Select
-                defaultValue={subscription?.currency ?? "INR"}
-                onValueChange={(v) => setValue("currency", v as SubscriptionFormData["currency"])}
-              >
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="INR">INR (₹)</SelectItem>
-                  <SelectItem value="USD">USD ($)</SelectItem>
-                  <SelectItem value="EUR">EUR (€)</SelectItem>
-                  <SelectItem value="GBP">GBP (£)</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="startDate">Start Date *</Label>
-              <Input id="startDate" type="date" {...register("startDate")} />
+              <Input
+                id="startDate"
+                type="date"
+                aria-invalid={!!errors.startDate}
+                {...register("startDate")}
+              />
               {errors.startDate && (
-                <p className="text-xs text-destructive">{errors.startDate.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.startDate.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="renewalDate">Renewal Date</Label>
               <Input id="renewalDate" type="date" {...register("renewalDate")} />
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated from start date &amp; billing cycle.
-              </p>
+              {errors.renewalDate ? (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.renewalDate.message}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Auto-calculated from start date &amp; billing cycle.
+                </p>
+              )}
             </div>
 
           </CardContent>

@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { format } from "date-fns";
 import { toast } from "sonner";
-import { Loader2, PlusCircle } from "lucide-react";
+import { Loader2, PlusCircle, AlertCircle } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -43,6 +43,16 @@ const METHOD_LABELS: Record<PaymentMethod, string> = {
   BANK_TRANSFER: "Bank Transfer",
 };
 
+function FieldError({ message }: { message?: string }) {
+  if (!message) return null;
+  return (
+    <p className="flex items-center gap-1 text-xs text-destructive mt-1">
+      <AlertCircle className="h-3 w-3 shrink-0" />
+      {message}
+    </p>
+  );
+}
+
 export function RecordPaymentDialog({
   open,
   onOpenChange,
@@ -58,12 +68,18 @@ export function RecordPaymentDialog({
   const [paymentDate, setPaymentDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [note, setNote] = useState("");
 
+  // Inline field errors
+  const [amountError, setAmountError] = useState("");
+  const [dateError, setDateError] = useState("");
+
   const sub = client.subscription;
 
   useEffect(() => {
     if (!open) return;
     setNote("");
     setPaymentDate(format(new Date(), "yyyy-MM-dd"));
+    setAmountError("");
+    setDateError("");
     if (sub) {
       setAmount(String(Number(sub.price)));
       setCurrency(sub.currency ?? "INR");
@@ -72,15 +88,29 @@ export function RecordPaymentDialog({
     }
   }, [open, sub]);
 
+  function validateAmount(val: string): string {
+    if (!val || val.trim() === "") return "Amount is required";
+    const n = Number(val);
+    if (isNaN(n)) return "Enter a valid number";
+    if (n <= 0) return "Amount must be greater than 0";
+    return "";
+  }
+
+  function validateDate(val: string): string {
+    if (!val) return "Payment date is required";
+    return "";
+  }
+
   function handleClose(v: boolean) {
     onOpenChange(v);
   }
 
   async function handleSubmit() {
-    if (!amount || Number(amount) <= 0) {
-      toast.error("Enter a valid payment amount");
-      return;
-    }
+    const aErr = validateAmount(amount);
+    const dErr = validateDate(paymentDate);
+    setAmountError(aErr);
+    setDateError(dErr);
+    if (aErr || dErr) return;
 
     setLoading(true);
     const res = await fetch("/api/payments", {
@@ -133,9 +163,15 @@ export function RecordPaymentDialog({
                 step="0.01"
                 min="0"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                aria-invalid={!!amountError}
+                onChange={(e) => {
+                  setAmount(e.target.value);
+                  if (amountError) setAmountError(validateAmount(e.target.value));
+                }}
+                onBlur={() => setAmountError(validateAmount(amount))}
                 placeholder="0.00"
               />
+              <FieldError message={amountError} />
             </div>
 
             <div className="space-y-1.5">
@@ -177,8 +213,14 @@ export function RecordPaymentDialog({
               <Input
                 type="date"
                 value={paymentDate}
-                onChange={(e) => setPaymentDate(e.target.value)}
+                aria-invalid={!!dateError}
+                onChange={(e) => {
+                  setPaymentDate(e.target.value);
+                  if (dateError) setDateError(validateDate(e.target.value));
+                }}
+                onBlur={() => setDateError(validateDate(paymentDate))}
               />
+              <FieldError message={dateError} />
             </div>
           </div>
 
@@ -228,9 +270,13 @@ export function RecordPaymentDialog({
             <Input
               id="rp-note"
               placeholder="Transaction ID, UPI ref, or any other note..."
+              maxLength={500}
               value={note}
               onChange={(e) => setNote(e.target.value)}
             />
+            {note.length > 400 && (
+              <p className="text-xs text-muted-foreground text-right">{note.length}/500</p>
+            )}
           </div>
         </div>
 

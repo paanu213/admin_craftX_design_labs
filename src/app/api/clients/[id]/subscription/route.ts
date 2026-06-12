@@ -4,6 +4,12 @@ import { db } from "@/lib/db";
 import { subscriptionSchema } from "@/lib/validations/client.schema";
 import type { BillingCycle } from "@/generated/prisma/enums";
 
+const CYCLE_LABEL: Record<string, string> = {
+  MONTHLY: "Monthly",
+  QUARTERLY: "Quarterly",
+  ANNUALLY: "Annual",
+};
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -33,16 +39,26 @@ export async function POST(
 
     const {
       applicationId,
-      planName,
       price,
       currency,
       billingCycle,
       startDate,
-      endDate,
       renewalDate,
       isAutoRenew,
       features,
     } = result.data;
+
+    // Auto-generate planName from application + billing cycle
+    let planName = `${CYCLE_LABEL[billingCycle] ?? billingCycle} Plan`;
+    if (applicationId) {
+      const app = await db.application.findUnique({
+        where: { id: applicationId },
+        select: { name: true },
+      });
+      if (app) {
+        planName = `${app.name} — ${CYCLE_LABEL[billingCycle] ?? billingCycle}`;
+      }
+    }
 
     const subscription = await db.subscription.upsert({
       where: { clientId },
@@ -54,7 +70,6 @@ export async function POST(
         currency: currency ?? "INR",
         billingCycle: billingCycle as BillingCycle,
         startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
         renewalDate: renewalDate ? new Date(renewalDate) : null,
         isAutoRenew: isAutoRenew ?? true,
         features: features ?? [],
@@ -66,7 +81,6 @@ export async function POST(
         currency: currency ?? "INR",
         billingCycle: billingCycle as BillingCycle,
         startDate: new Date(startDate),
-        endDate: endDate ? new Date(endDate) : null,
         renewalDate: renewalDate ? new Date(renewalDate) : null,
         isAutoRenew: isAutoRenew ?? true,
         features: features ?? [],
