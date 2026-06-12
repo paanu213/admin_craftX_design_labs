@@ -21,16 +21,18 @@
   `router.refresh()` re-renders the current route and races against the push, leaving the user stuck on the login page even though auth succeeded.
   **Always use `window.location.assign("/")` for post-login redirect** — it forces a full page load so the session cookie is sent and the dashboard server component sees the authenticated session. (`window.location.href = "/"` is equivalent but triggers `react-hooks/immutability` lint error — use `.assign()` instead.)
 
-- **`proxy.ts` MUST use `getToken` from `next-auth/jwt` — NEVER `auth(handler)`.**
-  Using `auth(handler)` in `proxy.ts` runs the full JWT callback on every request, including a DB query for group permissions. When that DB call is slow or times out, `req.auth` returns null → `isLoggedIn = false` → user is redirected to `/login` after a successful login (the post-login loop).
-  **The proxy does ONLY an optimistic cookie/JWT check (`getToken`). Full session validation lives in `(dashboard)/layout.tsx`.**
-  Correct pattern:
+- **`proxy.ts` MUST use direct cookie presence check — NEVER `auth(handler)` or `getToken`.**
+  - `auth(handler)` runs the full JWT callback on every request including a DB query → causes redirect loop when DB is slow.
+  - `getToken` without `secureCookie: true` looks for `authjs.session-token` but production (HTTPS) sets `__Secure-authjs.session-token` → mismatch → returns null → redirect loop.
+  - **The proxy does ONLY an optimistic cookie existence check. Full JWT verification lives in `(dashboard)/layout.tsx`.**
+  Correct pattern (do NOT change this):
   ```typescript
-  // proxy.ts — keep this exactly as-is, never replace with auth(handler)
-  import { getToken } from "next-auth/jwt";
-  export async function proxy(request: NextRequest) {
-    const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
-    const isLoggedIn = !!token;
+  // proxy.ts — keep exactly as-is
+  export function proxy(request: NextRequest) {
+    const isPublic = nextUrl.pathname === "/login";
+    const isLoggedIn =
+      request.cookies.has("__Secure-authjs.session-token") ||
+      request.cookies.has("authjs.session-token");
     if (!isLoggedIn && !isPublic) return NextResponse.redirect(new URL("/login", nextUrl));
     if (isLoggedIn && isPublic) return NextResponse.redirect(new URL("/", nextUrl));
   }
