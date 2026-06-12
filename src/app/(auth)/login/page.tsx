@@ -33,7 +33,7 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      if (result?.error) {
+      if (!result?.ok) {
         toast.error("Invalid email or password");
         return;
       }
