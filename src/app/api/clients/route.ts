@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
           { name: { contains: search, mode: "insensitive" as const } },
           { email: { contains: search, mode: "insensitive" as const } },
           { company: { contains: search, mode: "insensitive" as const } },
+          { clientCode: { contains: search, mode: "insensitive" as const } },
         ],
       }),
       ...(status && { status }),
@@ -106,6 +107,9 @@ export async function POST(request: NextRequest) {
 
     const data = result.data;
 
+    const [{ nextval }] = await db.$queryRaw<[{ nextval: bigint }]>`SELECT nextval('client_code_seq')`;
+    const clientCode = `CX-${String(nextval).padStart(4, "0")}`;
+
     const client = await db.client.create({
       data: {
         name: data.name,
@@ -126,6 +130,7 @@ export async function POST(request: NextRequest) {
         appRequirements: data.appRequirements ?? [],
         status: "REGISTERED",
         notes: data.notes || null,
+        clientCode,
       },
     });
 

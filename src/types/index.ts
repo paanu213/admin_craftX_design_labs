@@ -49,7 +49,7 @@ export interface Payment {
   updatedAt: string;
   recordedBy: { id: string; name: string; role: string };
   approvedBy: { id: string; name: string; role: string } | null;
-  client?: { id: string; name: string; company: string };
+  client?: { id: string; name: string; company: string; clientCode?: string | null };
 }
 
 export interface UserGroup {
@@ -77,6 +77,7 @@ export interface SafeUser {
 
 export interface ClientWithRelations {
   id: string;
+  clientCode: string | null;
   name: string;
   email: string;
   phone: string | null;
@@ -215,5 +216,5 @@ export interface DevAccessPassword {
   usedFromIp: string | null;
   createdAt: string;
   generatedBy: { id: string; name: string; role: string };
-  client?: { id: string; name: string; company: string };
+  client?: { id: string; name: string; company: string; clientCode?: string | null };
 }

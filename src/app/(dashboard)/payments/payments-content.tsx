@@ -210,12 +210,14 @@ export function PaymentsContent() {
                     >
                       <td className="px-4 py-3">
                         <button
-                          className="font-medium text-foreground hover:text-primary hover:underline text-left"
+                          className="font-semibold text-foreground hover:text-primary hover:underline text-left"
                           onClick={() => router.push(`/clients/${payment.clientId}`)}
                         >
                           {payment.client?.company ?? "—"}
                         </button>
-                        <p className="text-xs text-muted-foreground">{payment.client?.name}</p>
+                        {payment.client?.clientCode && (
+                          <p className="text-xs font-mono text-muted-foreground">{payment.client.clientCode}</p>
+                        )}
                         {payment.isRenewal && (
                           <Badge variant="secondary" className="text-xs mt-0.5">Renewal</Badge>
                         )}

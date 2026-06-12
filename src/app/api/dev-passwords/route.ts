@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
         usedAt: true,
         usedFromIp: true,
         createdAt: true,
-        client: { select: { id: true, name: true, company: true } },
+        client: { select: { id: true, name: true, company: true, clientCode: true } },
         generatedBy: { select: { id: true, name: true, role: true } },
       },
     });
@@ -122,7 +122,7 @@ export async function POST(request: NextRequest) {
         usedAt: true,
         usedFromIp: true,
         createdAt: true,
-        client: { select: { id: true, name: true, company: true } },
+        client: { select: { id: true, name: true, company: true, clientCode: true } },
         generatedBy: { select: { id: true, name: true, role: true } },
       },
     });

@@ -228,12 +228,12 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
                         className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                       >
                         <td className="px-4 py-3">
-                          <p className="font-medium text-foreground">
-                            {record.client?.name ?? "—"}
+                          <p className="font-semibold text-foreground">
+                            {record.client?.company ?? "—"}
                           </p>
-                          {record.client?.company && (
-                            <p className="text-xs text-muted-foreground">
-                              {record.client.company}
+                          {record.client?.clientCode && (
+                            <p className="text-xs font-mono text-muted-foreground">
+                              {record.client.clientCode}
                             </p>
                           )}
                         </td>

@@ -36,6 +36,7 @@ interface ClientOption {
   id: string;
   name: string;
   company: string;
+  clientCode?: string | null;
 }
 
 interface GenerateResponse {
@@ -43,7 +44,7 @@ interface GenerateResponse {
   plaintext: string;
   expiresAt: string;
   expiryHours: number;
-  client: { id: string; name: string; company: string };
+  client: { id: string; name: string; company: string; clientCode?: string | null };
 }
 
 export function GenerateDevPasswordDialog({
@@ -127,11 +128,14 @@ export function GenerateDevPasswordDialog({
     if (!prefillClientId) setSelectedClientId("");
   }
 
+  const selectedClient = clients.find((c) => c.id === selectedClientId);
   const displayClientName =
     prefillClientName ??
-    clients.find((c) => c.id === selectedClientId)?.name ??
-    generated?.client?.name ??
-    "";
+    (selectedClient
+      ? `${selectedClient.company}${selectedClient.clientCode ? ` (${selectedClient.clientCode})` : ""}`
+      : generated?.client
+      ? `${generated.client.company}${generated.client.clientCode ? ` (${generated.client.clientCode})` : ""}`
+      : "");
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -159,7 +163,7 @@ export function GenerateDevPasswordDialog({
                     <SelectContent>
                       {clients.map((client) => (
                         <SelectItem key={client.id} value={client.id}>
-                          {client.name} — {client.company}
+                          {client.company}{client.clientCode ? ` (${client.clientCode})` : ""}
                         </SelectItem>
                       ))}
                     </SelectContent>

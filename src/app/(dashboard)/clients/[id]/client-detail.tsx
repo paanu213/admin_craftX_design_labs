@@ -336,8 +336,13 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="min-w-0">
-            <h2 className="text-xl sm:text-2xl font-bold truncate">{client.name}</h2>
-            <p className="text-sm text-muted-foreground truncate">{client.company}</p>
+            <h2 className="text-xl sm:text-2xl font-bold truncate">{client.company}</h2>
+            <div className="flex items-center gap-2">
+              {client.clientCode && (
+                <span className="text-xs font-mono text-muted-foreground">{client.clientCode}</span>
+              )}
+              <span className="text-sm text-muted-foreground truncate">{client.name}</span>
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-2 flex-wrap">

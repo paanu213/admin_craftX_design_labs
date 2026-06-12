@@ -35,7 +35,7 @@ export async function GET(request: NextRequest) {
         where,
         orderBy: { createdAt: "desc" },
         include: {
-          client: { select: { id: true, name: true, company: true } },
+          client: { select: { id: true, name: true, company: true, clientCode: true } },
           recordedBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
         },
@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
         take: limit,
         orderBy: { createdAt: "desc" },
         include: {
-          client: { select: { id: true, name: true, company: true } },
+          client: { select: { id: true, name: true, company: true, clientCode: true } },
           recordedBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
         },

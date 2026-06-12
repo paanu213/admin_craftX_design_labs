@@ -171,6 +171,7 @@ model User {
 
 model Client {
   id              String       @id @default(cuid())
+  clientCode      String?      @unique @map("client_code")
   name            String
   email           String       @unique
   phone           String?
