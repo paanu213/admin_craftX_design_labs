@@ -5,7 +5,7 @@ import { useForm } from "react-hook-form";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react";
+import { Loader2, AlertCircle } from "lucide-react";
 import {
   subscriptionSchema,
   type SubscriptionFormData,
@@ -65,6 +65,7 @@ export function SubscriptionForm({
   } = useForm<SubscriptionFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(subscriptionSchema) as any,
+    mode: "onTouched",
     defaultValues: subscription
       ? {
           applicationId: (subscription as any).applicationId ?? null,
@@ -177,19 +178,23 @@ export function SubscriptionForm({
               )}
             </div>
 
-            <div className="space-y-2 sm:col-span-2">
+            <div className="space-y-1.5 sm:col-span-2">
               <Label htmlFor="planName">Plan Name *</Label>
               <Input
                 id="planName"
                 placeholder="Professional Plan"
+                maxLength={100}
+                aria-invalid={!!errors.planName}
                 {...register("planName")}
               />
               {errors.planName && (
-                <p className="text-xs text-destructive">{errors.planName.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.planName.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label>Billing Cycle *</Label>
               <Select
                 defaultValue={subscription?.billingCycle ?? "MONTHLY"}
@@ -206,23 +211,32 @@ export function SubscriptionForm({
                   <SelectItem value="ANNUALLY">Annually</SelectItem>
                 </SelectContent>
               </Select>
+              {errors.billingCycle && (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.billingCycle.message}
+                </p>
+              )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="price">Price *</Label>
               <Input
                 id="price"
                 type="number"
                 step="0.01"
+                min="0"
                 placeholder="0.00"
+                aria-invalid={!!errors.price}
                 {...register("price", { valueAsNumber: true })}
               />
               {errors.price && (
-                <p className="text-xs text-destructive">{errors.price.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.price.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="currency">Currency</Label>
               <Select
                 defaultValue={subscription?.currency ?? "INR"}
@@ -240,20 +254,33 @@ export function SubscriptionForm({
               </Select>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="startDate">Start Date *</Label>
-              <Input id="startDate" type="date" {...register("startDate")} />
+              <Input
+                id="startDate"
+                type="date"
+                aria-invalid={!!errors.startDate}
+                {...register("startDate")}
+              />
               {errors.startDate && (
-                <p className="text-xs text-destructive">{errors.startDate.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.startDate.message}
+                </p>
               )}
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               <Label htmlFor="renewalDate">Renewal Date</Label>
               <Input id="renewalDate" type="date" {...register("renewalDate")} />
-              <p className="text-xs text-muted-foreground">
-                Auto-calculated from start date &amp; billing cycle.
-              </p>
+              {errors.renewalDate ? (
+                <p className="flex items-center gap-1 text-xs text-destructive">
+                  <AlertCircle className="h-3 w-3 shrink-0" />{errors.renewalDate.message}
+                </p>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Auto-calculated from start date &amp; billing cycle.
+                </p>
+              )}
             </div>
 
           </CardContent>

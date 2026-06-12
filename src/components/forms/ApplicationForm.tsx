@@ -6,7 +6,7 @@ import { useRouter } from "next/navigation";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useRef, useState } from "react";
-import { Loader2, ArrowLeft, Upload, X, ImageIcon } from "lucide-react";
+import { Loader2, ArrowLeft, Upload, X, ImageIcon, AlertCircle } from "lucide-react";
 import { applicationSchema, type ApplicationFormData } from "@/lib/validations/application.schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -57,6 +57,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
   } = useForm<ApplicationFormData>({
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     resolver: zodResolver(applicationSchema) as any,
+    mode: "onTouched",
     defaultValues: application
       ? {
           name: application.name,
@@ -170,9 +171,9 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
               <Label htmlFor="name">Name *</Label>
-              <Input id="name" placeholder="My Application" {...register("name")} />
+              <Input id="name" placeholder="My Application" maxLength={100} aria-invalid={!!errors.name} {...register("name")} />
               {errors.name && (
-                <p className="text-xs text-destructive">{errors.name.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.name.message}</p>
               )}
             </div>
 
@@ -196,15 +197,15 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
                 </SelectContent>
               </Select>
               {errors.category && (
-                <p className="text-xs text-destructive">{errors.category.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.category.message}</p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="version">Version *</Label>
-              <Input id="version" placeholder="1.0.0" {...register("version")} />
+              <Input id="version" placeholder="1.0.0" maxLength={20} aria-invalid={!!errors.version} {...register("version")} />
               {errors.version && (
-                <p className="text-xs text-destructive">{errors.version.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.version.message}</p>
               )}
             </div>
 
@@ -251,7 +252,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
                 {...register("monthlyPrice", { valueAsNumber: true })}
               />
               {errors.monthlyPrice && (
-                <p className="text-xs text-destructive">{errors.monthlyPrice.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.monthlyPrice.message}</p>
               )}
             </div>
 
@@ -266,7 +267,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
                 {...register("yearlyPrice", { valueAsNumber: true })}
               />
               {errors.yearlyPrice && (
-                <p className="text-xs text-destructive">{errors.yearlyPrice.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.yearlyPrice.message}</p>
               )}
             </div>
 
@@ -365,7 +366,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
                   }}
                 />
                 {errors.logoUrl && (
-                  <p className="text-xs text-destructive">{errors.logoUrl.message}</p>
+                  <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.logoUrl.message}</p>
                 )}
               </div>
             </div>
@@ -374,7 +375,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
               <Label htmlFor="website">Website</Label>
               <Input id="website" placeholder="https://..." {...register("website")} />
               {errors.website && (
-                <p className="text-xs text-destructive">{errors.website.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.website.message}</p>
               )}
             </div>
 
@@ -382,7 +383,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
               <Label htmlFor="playStoreUrl">Play Store URL</Label>
               <Input id="playStoreUrl" placeholder="https://play.google.com/..." {...register("playStoreUrl")} />
               {errors.playStoreUrl && (
-                <p className="text-xs text-destructive">{errors.playStoreUrl.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.playStoreUrl.message}</p>
               )}
             </div>
 
@@ -390,7 +391,7 @@ export function ApplicationForm({ application, onSuccess }: ApplicationFormProps
               <Label htmlFor="appStoreUrl">App Store URL</Label>
               <Input id="appStoreUrl" placeholder="https://apps.apple.com/..." {...register("appStoreUrl")} />
               {errors.appStoreUrl && (
-                <p className="text-xs text-destructive">{errors.appStoreUrl.message}</p>
+                <p className="flex items-center gap-1 text-xs text-destructive"><AlertCircle className="h-3 w-3 shrink-0" />{errors.appStoreUrl.message}</p>
               )}
             </div>
           </CardContent>

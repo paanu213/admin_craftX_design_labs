@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Copy, Check, ShieldCheck } from "lucide-react";
+import { Copy, Check, ShieldCheck, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -59,6 +59,8 @@ export function GenerateDevPasswordDialog({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [generated, setGenerated] = useState<GenerateResponse | null>(null);
   const [copied, setCopied] = useState(false);
+  const [clientError, setClientError] = useState("");
+  const [reasonError, setReasonError] = useState("");
 
   const { data: clientsData } = useQuery<{ data: ClientOption[] }>({
     queryKey: ["clients-list-minimal"],
@@ -73,14 +75,11 @@ export function GenerateDevPasswordDialog({
     e.preventDefault();
 
     const clientIdToUse = prefillClientId ?? selectedClientId;
-    if (!clientIdToUse) {
-      toast.error("Please select a client");
-      return;
-    }
-    if (!reason.trim()) {
-      toast.error("Reason is required");
-      return;
-    }
+    const cErr = clientIdToUse ? "" : "Please select a client";
+    const rErr = reason.trim() ? "" : "Reason is required — describe why access is needed";
+    setClientError(cErr);
+    setReasonError(rErr);
+    if (cErr || rErr) return;
 
     setIsSubmitting(true);
     try {
@@ -125,6 +124,8 @@ export function GenerateDevPasswordDialog({
     setGenerated(null);
     setReason("");
     setCopied(false);
+    setClientError("");
+    setReasonError("");
     if (!prefillClientId) setSelectedClientId("");
   }
 
@@ -151,11 +152,14 @@ export function GenerateDevPasswordDialog({
 
             <form onSubmit={handleSubmit} className="space-y-4">
               {!prefillClientId && (
-                <div className="space-y-2">
-                  <Label htmlFor="client-select">Client</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="client-select">Client *</Label>
                   <Select
                     value={selectedClientId}
-                    onValueChange={setSelectedClientId}
+                    onValueChange={(v) => {
+                      setSelectedClientId(v);
+                      if (clientError) setClientError("");
+                    }}
                   >
                     <SelectTrigger id="client-select">
                       <SelectValue placeholder="Select a client..." />
@@ -168,6 +172,11 @@ export function GenerateDevPasswordDialog({
                       ))}
                     </SelectContent>
                   </Select>
+                  {clientError && (
+                    <p className="flex items-center gap-1 text-xs text-destructive mt-1">
+                      <AlertCircle className="h-3 w-3 shrink-0" />{clientError}
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -180,16 +189,33 @@ export function GenerateDevPasswordDialog({
                 </div>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-1.5">
                 <Label htmlFor="reason">Reason <span className="text-destructive">*</span></Label>
                 <Textarea
                   id="reason"
                   placeholder="e.g. SQL debugging for order sync issue (ticket #1234)"
                   value={reason}
-                  onChange={(e) => setReason(e.target.value)}
+                  aria-invalid={!!reasonError}
+                  onChange={(e) => {
+                    setReason(e.target.value);
+                    if (reasonError && e.target.value.trim()) setReasonError("");
+                  }}
+                  onBlur={() => {
+                    if (!reason.trim()) setReasonError("Reason is required — describe why access is needed");
+                  }}
                   rows={3}
-                  required
+                  maxLength={500}
                 />
+                <div className="flex items-center justify-between">
+                  {reasonError ? (
+                    <p className="flex items-center gap-1 text-xs text-destructive">
+                      <AlertCircle className="h-3 w-3 shrink-0" />{reasonError}
+                    </p>
+                  ) : <span />}
+                  <span className={`text-xs tabular-nums ${reason.length > 400 ? "text-amber-500" : "text-muted-foreground"}`}>
+                    {reason.length}/500
+                  </span>
+                </div>
               </div>
 
               <DialogFooter>
