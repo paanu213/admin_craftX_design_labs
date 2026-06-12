@@ -122,6 +122,7 @@ export const PAYMENT_METHOD_LABELS: Record<string, string> = {
   UPI: "UPI",
   CARD: "Card",
   BANK_TRANSFER: "Bank Transfer",
+  ONLINE: "Online (Razorpay)",
 };
 
 export const PAYMENT_RECEIVER_LABELS: Record<string, string> = {

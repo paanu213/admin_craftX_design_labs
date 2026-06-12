@@ -81,24 +81,13 @@ export const clientSchema = z.object({
 
 export const subscriptionSchema = z.object({
   applicationId: z.string().optional().nullable(),
-  planName: z
-    .string()
-    .min(1, "Plan name is required")
-    .max(100, "Plan name cannot exceed 100 characters"),
   price: z.number().min(0, "Price cannot be negative"),
   currency: z.enum(SUPPORTED_CURRENCIES).default("INR"),
-  billingCycle: z.enum(["MONTHLY", "QUARTERLY", "ANNUALLY"], {
-    required_error: "Billing cycle is required",
-  }),
+  billingCycle: z.enum(["MONTHLY", "QUARTERLY", "ANNUALLY"]),
   startDate: z
     .string()
     .min(1, "Start date is required")
     .refine((d) => !isNaN(Date.parse(d)), "Invalid date"),
-  endDate: z
-    .string()
-    .refine((d) => !d || !isNaN(Date.parse(d)), "Invalid end date")
-    .optional()
-    .or(z.literal("")),
   renewalDate: z
     .string()
     .refine((d) => !d || !isNaN(Date.parse(d)), "Invalid renewal date")
@@ -124,5 +113,5 @@ export const contactSchema = z.object({
 });
 
 export type ClientFormData = z.infer<typeof clientSchema>;
-export type SubscriptionFormData = z.infer<typeof subscriptionSchema>;
+export type SubscriptionFormData = z.infer<typeof subscriptionSchema> & { planName?: string };
 export type ContactFormData = z.infer<typeof contactSchema>;

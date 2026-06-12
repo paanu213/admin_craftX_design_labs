@@ -74,6 +74,7 @@ enum PaymentMethod {
   UPI
   CARD
   BANK_TRANSFER
+  ONLINE
 }
 
 enum PaymentReceiver {
@@ -142,8 +143,9 @@ model User {
   applicationsCreated   Application[]       @relation("AppCreatedBy")
   paymentsRecorded      Payment[]           @relation("PaymentRecordedBy")
   paymentsApproved      Payment[]           @relation("PaymentApprovedBy")
-  devPasswordsGenerated DevAccessPassword[] @relation("DevPasswordGeneratedBy")
-  systemConfigsUpdated  SystemConfig[]      @relation("ConfigUpdatedBy")
+  devPasswordsGenerated DevAccessPassword[]  @relation("DevPasswordGeneratedBy")
+  systemConfigsUpdated  SystemConfig[]       @relation("ConfigUpdatedBy")
+  razorpayLinksCreated  RazorpayPaymentLink[] @relation("RazorpayLinkCreatedBy")
 
   @@map("users")
 }
@@ -178,11 +180,12 @@ model Client {
   createdAt       DateTime     @default(now())
   updatedAt       DateTime     @updatedAt
 
-  contacts           Contact[]
-  subscription       Subscription?
-  activationKey      ActivationKey?
-  payments           Payment[]
-  devAccessPasswords DevAccessPassword[]
+  contacts            Contact[]
+  subscription        Subscription?
+  activationKey       ActivationKey?
+  payments            Payment[]
+  devAccessPasswords  DevAccessPassword[]
+  razorpayLinks       RazorpayPaymentLink[]
 
   @@map("clients")
 }
@@ -219,9 +222,10 @@ model Subscription {
   createdAt     DateTime     @default(now())
   updatedAt     DateTime     @updatedAt
 
-  client      Client       @relation(fields: [clientId], references: [id], onDelete: Cascade)
-  application Application? @relation(fields: [applicationId], references: [id])
-  payments    Payment[]
+  client        Client                @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  application   Application?          @relation(fields: [applicationId], references: [id])
+  payments      Payment[]
+  razorpayLinks RazorpayPaymentLink[]
 
   @@map("subscriptions")
 }
@@ -383,6 +387,34 @@ model SystemConfig {
 // ─────────────────────────────────────────────
 // Master Data
 // ─────────────────────────────────────────────
+
+// ─────────────────────────────────────────────
+// Razorpay
+// ─────────────────────────────────────────────
+
+model RazorpayPaymentLink {
+  id             String    @id @default(cuid())
+  clientId       String    @map("client_id")
+  subscriptionId String?   @map("subscription_id")
+  razorpayLinkId String    @unique @map("razorpay_link_id")
+  url            String
+  shortUrl       String?   @map("short_url")
+  amount         Decimal   @db.Decimal(10, 2)
+  currency       String    @default("INR")
+  description    String?
+  status         String    @default("created")
+  expiresAt      DateTime? @map("expires_at")
+  paidAt         DateTime? @map("paid_at")
+  createdById    String    @map("created_by_id")
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  client       Client        @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  createdBy    User          @relation("RazorpayLinkCreatedBy", fields: [createdById], references: [id])
+
+  @@map("razorpay_payment_links")
+}
 
 model AppCategoryMaster {
   id        String   @id @default(cuid())
