@@ -3,11 +3,6 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Razorpay from "razorpay";
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID ?? "",
-  key_secret: process.env.RAZORPAY_KEY_SECRET ?? "",
-});
-
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();
@@ -21,6 +16,11 @@ export async function POST(request: NextRequest) {
         { status: 503 }
       );
     }
+
+    const razorpay = new Razorpay({
+      key_id: process.env.RAZORPAY_KEY_ID,
+      key_secret: process.env.RAZORPAY_KEY_SECRET,
+    });
 
     const { clientId, subscriptionId, amount, currency, description } =
       await request.json();
