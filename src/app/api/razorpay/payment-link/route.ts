@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
     const { clientId, subscriptionId, amount, currency, description } =
       await request.json();
 
-    if (!clientId || !amount) {
+    if (!clientId || amount == null || Number(amount) < 0) {
       return NextResponse.json(
-        { error: "clientId and amount are required" },
+        { error: "clientId and a non-negative amount are required" },
         { status: 400 }
       );
     }
