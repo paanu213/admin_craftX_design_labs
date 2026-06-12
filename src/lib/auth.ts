@@ -8,6 +8,7 @@ import {
   computeEffectivePermissions,
   getPermissionsFromRole,
   FULL_PERMISSIONS,
+  MODULES,
   type PermissionMatrix,
 } from "@/lib/permissions";
 
@@ -44,13 +45,15 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       if (user) {
         token.id = user.id ?? "";
         token.role = (user as { role: UserRole }).role;
+      }
 
-        // Fetch groups and compute permission matrix on sign-in
-        // Wrapped in try/catch so a missing migration never breaks login
+      // Re-fetch group permissions on EVERY token refresh (not just sign-in).
+      // This means group permission changes take effect immediately without re-login.
+      if (token.id) {
         try {
           const groups = await db.userGroup.findMany({
             where: {
-              members: { some: { userId: user.id as string } },
+              members: { some: { userId: token.id as string } },
               isActive: true,
             },
             select: { id: true, name: true, permissions: true },
@@ -58,26 +61,34 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
           if (groups.length > 0) {
             token.groups = groups.map(g => ({ id: g.id, name: g.name }));
-            token.permissionMatrix = computeEffectivePermissions(
+            const effective = computeEffectivePermissions(
               groups.map(g => g.permissions as Partial<PermissionMatrix>)
             );
+            // If group permissions cover every module fully → grant FULL_PERMISSIONS
+            // so adding new modules to MODULES auto-grants them too
+            const isGroupFullAdmin = MODULES.every(m =>
+              effective[m.key]?.read && effective[m.key]?.create &&
+              effective[m.key]?.update && effective[m.key]?.delete
+            );
+            token.permissionMatrix = isGroupFullAdmin ? FULL_PERMISSIONS : effective;
           } else {
             token.groups = [];
             token.permissionMatrix = getPermissionsFromRole(token.role as string);
           }
         } catch {
-          token.groups = [];
-          token.permissionMatrix = getPermissionsFromRole(token.role as string);
+          // DB unavailable — keep existing token permissions or fall back to role
+          if (!token.permissionMatrix) {
+            token.permissionMatrix = getPermissionsFromRole(token.role as string);
+          }
         }
       }
 
-      // Always enforce SUPER_ADMIN full access — runs on every token refresh,
-      // not just sign-in, so role changes take effect without re-logging in.
+      // Always enforce SUPER_ADMIN role → full access, runs on every refresh.
       if (token.role === 'SUPER_ADMIN') {
         token.permissionMatrix = FULL_PERMISSIONS;
       }
 
-      // Fallback: old sessions that predate the permissionMatrix field
+      // Fallback for sessions predating the permissionMatrix field
       if (!token.permissionMatrix && token.role) {
         token.permissionMatrix = getPermissionsFromRole(token.role as string);
       }

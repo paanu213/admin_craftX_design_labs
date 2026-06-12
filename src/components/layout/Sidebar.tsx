@@ -35,7 +35,7 @@ const navItems = [
 ];
 
 const adminItems = [
-  { label: "Master Data", href: "/master-data", icon: Database, permission: "manageUsers" as const },
+  { label: "Master Data", href: "/master-data", icon: Database, permission: "viewMasterData" as const },
   { label: "Users", href: "/settings/users", icon: Settings, permission: "manageUsers" as const },
   { label: "User Groups", href: "/settings/user-groups", icon: UsersRound, permission: "manageUsers" as const },
 ];

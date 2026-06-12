@@ -20,7 +20,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { MODULES, EMPTY_PERMISSIONS, type PermissionMatrix, type ModuleKey, type Action } from "@/lib/permissions";
+import { MODULES, EMPTY_PERMISSIONS, FULL_PERMISSIONS, type PermissionMatrix, type ModuleKey, type Action } from "@/lib/permissions";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -382,6 +382,32 @@ export function UserGroupsContent() {
             </DialogDescription>
           </DialogHeader>
 
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-muted-foreground">
+              Check the actions each module allows for this group.
+            </p>
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-7"
+                onClick={() => setPermMatrix(structuredClone(EMPTY_PERMISSIONS))}
+              >
+                Clear All
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="text-xs h-7 text-emerald-600 border-emerald-300 hover:bg-emerald-50 dark:hover:bg-emerald-950/20"
+                onClick={() => setPermMatrix(structuredClone(FULL_PERMISSIONS))}
+              >
+                Grant Full Access
+              </Button>
+            </div>
+          </div>
+
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -401,7 +427,7 @@ export function UserGroupsContent() {
                     {ACTIONS.map((action) => (
                       <td key={action} className="text-center py-3 px-3">
                         <Checkbox
-                          checked={permMatrix[mod.key][action]}
+                          checked={permMatrix[mod.key]?.[action] ?? false}
                           onCheckedChange={() => togglePermission(mod.key, action)}
                         />
                       </td>

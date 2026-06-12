@@ -36,6 +36,25 @@
 
 - **`@typescript-eslint/no-explicit-any` in API routes:** Import proper Prisma enum types from `@/generated/prisma/enums` (e.g. `AppStatus`, `ExpenseStatus`) and cast with those instead of `any`.
 
+## Permissions — Adding New Modules
+
+**Rule: Every new feature/section added to the application must be added to `src/lib/permissions.ts` MODULES array.**
+
+- Add the new module key+label to `MODULES` (this makes it appear in the User Groups permissions matrix screen)
+- Add old-style permission keys for it to `OLD_KEY_MAP` (e.g. `viewXxx: ['xxx', 'read']`)
+- Add defaults for it in `ROLE_FALLBACK_PERMISSIONS` for CEO, CMO, etc.
+- Update the Sidebar to use the new permission key (not a borrowed one from another module)
+- Update any API routes guarding that module to use `canDo(matrix, "xxx", "read/create/...")` with the correct module key
+- SUPER_ADMIN role always gets full access automatically
+- Any group with ALL modules + ALL actions = true is auto-promoted to FULL_PERMISSIONS (no need to re-save when a new module is added — it's automatic)
+
+## Auth / Group Permissions — Key Behaviour
+
+- Group permissions are re-fetched on **every JWT token refresh** — permission changes take effect immediately without re-login.
+- If a user is in a group where ALL modules × ALL actions = true → they get `FULL_PERMISSIONS` automatically (any new module added later is covered too).
+- SUPER_ADMIN **role** always overrides to FULL_PERMISSIONS (separate from group membership).
+- To give a user super-admin level access via a group: open User Groups → Manage Permissions → click **"Grant Full Access"** → Save. The user will get full access on their next request (no re-login needed).
+
 ## Secrets / Environment Variables
 
 - **Never commit secrets.** Razorpay keys, DB passwords, and all credentials go in `.env` only (gitignored). Add placeholders to `.env.example`.

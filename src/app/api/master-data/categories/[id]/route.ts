@@ -8,7 +8,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!canDo(session.user.permissionMatrix, "users", "create")) {
+    if (!canDo(session.user.permissionMatrix, "masterData", "create")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -39,7 +39,7 @@ export async function DELETE(_: NextRequest, { params }: { params: Promise<{ id:
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!canDo(session.user.permissionMatrix, "users", "create")) {
+    if (!canDo(session.user.permissionMatrix, "masterData", "create")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

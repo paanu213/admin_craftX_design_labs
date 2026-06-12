@@ -24,7 +24,7 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    if (!canDo(session.user.permissionMatrix, "users", "create")) {
+    if (!canDo(session.user.permissionMatrix, "masterData", "create")) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
