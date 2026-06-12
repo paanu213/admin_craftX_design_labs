@@ -12,6 +12,23 @@ import {
   type PermissionMatrix,
 } from "@/lib/permissions";
 
+// In-memory rate limiter: max 5 failed attempts per email per 15 minutes.
+// Resets on server restart — acceptable for an internal admin tool.
+// On success the record is cleared so legitimate users are never locked out.
+const loginAttempts = new Map<string, { count: number; resetAt: number }>();
+
+function checkRateLimit(email: string): boolean {
+  const now = Date.now();
+  const rec = loginAttempts.get(email);
+  if (!rec || rec.resetAt <= now) {
+    loginAttempts.set(email, { count: 1, resetAt: now + 15 * 60 * 1000 });
+    return false;
+  }
+  if (rec.count >= 5) return true;
+  rec.count++;
+  return false;
+}
+
 export const { handlers, signIn, signOut, auth } = NextAuth({
   trustHost: true,
   providers: [
@@ -22,6 +39,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const { email, password } = parsed.data;
 
+        if (checkRateLimit(email)) return null;
+
         const user = await db.user.findFirst({
           where: { email: { equals: email, mode: "insensitive" } },
         });
@@ -29,6 +48,9 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 
         const passwordMatch = await bcrypt.compare(password, user.password);
         if (!passwordMatch) return null;
+
+        // Clear failed-attempt counter on successful login
+        loginAttempts.delete(email);
 
         return {
           id: user.id,
