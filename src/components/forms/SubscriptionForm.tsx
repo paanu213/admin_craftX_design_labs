@@ -95,15 +95,6 @@ export function SubscriptionForm({
 
   const selectedApp = apps.find((a) => a.id === watchedAppId);
 
-  // Which billing cycles have prices for this app?
-  const availableCycles = selectedApp
-    ? ([
-        selectedApp.monthlyPrice != null ? "MONTHLY" : null,
-        selectedApp.monthlyPrice != null ? "QUARTERLY" : null, // quarterly = monthly × 3 treated as monthly price
-        selectedApp.yearlyPrice != null ? "ANNUALLY" : null,
-      ].filter(Boolean) as string[])
-    : ["MONTHLY", "QUARTERLY", "ANNUALLY"];
-
   // Unique cycles only (MONTHLY and QUARTERLY both need monthlyPrice)
   const uniqueCycles = selectedApp
     ? [

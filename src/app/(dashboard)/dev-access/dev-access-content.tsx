@@ -73,12 +73,14 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
   });
 
   // Initialize expiry input from settings once loaded (don't override if user has typed)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (settings?.DEV_PASSWORD_EXPIRY_HOURS && !settingsLoaded) {
       setExpiryHours(settings.DEV_PASSWORD_EXPIRY_HOURS);
       setSettingsLoaded(true);
     }
   }, [settings, settingsLoaded]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   async function handleSaveSettings() {
     const hours = parseInt(expiryHours || "0", 10);
