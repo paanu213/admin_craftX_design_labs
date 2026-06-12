@@ -3,6 +3,28 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import Razorpay from "razorpay";
 
+export async function GET(request: NextRequest) {
+  try {
+    const session = await auth();
+    if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const { searchParams } = new URL(request.url);
+    const clientId = searchParams.get("clientId");
+    if (!clientId) return NextResponse.json({ error: "clientId required" }, { status: 400 });
+
+    const links = await db.razorpayPaymentLink.findMany({
+      where: { clientId },
+      orderBy: { createdAt: "desc" },
+      include: { createdBy: { select: { id: true, name: true } } },
+    });
+
+    return NextResponse.json(links);
+  } catch (error) {
+    console.error("[GET /api/razorpay/payment-link]", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const session = await auth();

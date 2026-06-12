@@ -6,12 +6,14 @@ import { canDo } from "@/lib/permissions";
 
 const patchSchema = z.discriminatedUnion("action", [
   z.object({ action: z.literal("deposit") }),
-  z.object({
-    action: z.literal("approve"),
-  }),
+  z.object({ action: z.literal("approve") }),
   z.object({
     action: z.literal("reject"),
     rejectionNote: z.string().min(1, "Rejection reason is required"),
+  }),
+  z.object({
+    action: z.literal("cancel"),
+    cancellationNote: z.string().min(1, "Cancellation reason is required"),
   }),
 ]);
 
@@ -31,6 +33,7 @@ export async function GET(
         client: { select: { id: true, name: true, company: true } },
         recordedBy: { select: { id: true, name: true, role: true } },
         approvedBy: { select: { id: true, name: true, role: true } },
+        cancelledBy: { select: { id: true, name: true, role: true } },
       },
     });
 
@@ -84,6 +87,7 @@ export async function PATCH(
           client: { select: { id: true, name: true, company: true } },
           recordedBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
+          cancelledBy: { select: { id: true, name: true, role: true } },
         },
       });
       return NextResponse.json({ ...updated, amount: Number(updated.amount) });
@@ -117,6 +121,33 @@ export async function PATCH(
           client: { select: { id: true, name: true, company: true } },
           recordedBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
+          cancelledBy: { select: { id: true, name: true, role: true } },
+        },
+      });
+      return NextResponse.json({ ...updated, amount: Number(updated.amount) });
+    }
+
+    if (action === "cancel") {
+      if (!canDo(matrix, 'payments', 'delete')) {
+        return NextResponse.json({ error: "You do not have permission to cancel payments" }, { status: 403 });
+      }
+      if (payment.status === "CANCELLED") {
+        return NextResponse.json({ error: "Payment is already cancelled" }, { status: 400 });
+      }
+
+      const updated = await db.payment.update({
+        where: { id },
+        data: {
+          status: "CANCELLED",
+          cancelledAt: new Date(),
+          cancelledById: session.user.id,
+          cancellationNote: (result.data as { action: "cancel"; cancellationNote: string }).cancellationNote,
+        },
+        include: {
+          client: { select: { id: true, name: true, company: true } },
+          recordedBy: { select: { id: true, name: true, role: true } },
+          approvedBy: { select: { id: true, name: true, role: true } },
+          cancelledBy: { select: { id: true, name: true, role: true } },
         },
       });
       return NextResponse.json({ ...updated, amount: Number(updated.amount) });

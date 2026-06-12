@@ -83,11 +83,6 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
         }
       }
 
-      // Always enforce SUPER_ADMIN role → full access, runs on every refresh.
-      if (token.role === 'SUPER_ADMIN') {
-        token.permissionMatrix = FULL_PERMISSIONS;
-      }
-
       // Fallback for sessions predating the permissionMatrix field
       if (!token.permissionMatrix && token.role) {
         token.permissionMatrix = getPermissionsFromRole(token.role as string);

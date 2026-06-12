@@ -44,6 +44,7 @@ export const ROLE_LABELS: Record<string, string> = {
   CFO: "CFO",
   CTO: "CTO",
   COO: "COO",
+  EMPLOYEE: "Employee",
 };
 
 export const CLIENT_STATUS_LABELS: Record<string, string> = {
@@ -135,13 +136,15 @@ export const PAYMENT_STATUS_LABELS: Record<string, string> = {
   PENDING_APPROVAL: "Pending Approval",
   APPROVED: "Approved",
   REJECTED: "Rejected",
+  CANCELLED: "Cancelled",
 };
 
-export const PAYMENT_STATUS_VARIANT: Record<string, "warning" | "info" | "success" | "destructive"> = {
+export const PAYMENT_STATUS_VARIANT: Record<string, "warning" | "info" | "success" | "destructive" | "muted"> = {
   PENDING_DEPOSIT: "warning",
   PENDING_APPROVAL: "info",
   APPROVED: "success",
   REJECTED: "destructive",
+  CANCELLED: "muted",
 };
 
 export const KEY_TYPE_LABELS: Record<string, string> = {

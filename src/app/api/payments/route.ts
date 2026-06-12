@@ -38,6 +38,7 @@ export async function GET(request: NextRequest) {
           client: { select: { id: true, name: true, company: true, clientCode: true } },
           recordedBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
+          cancelledBy: { select: { id: true, name: true, role: true } },
         },
       });
       return NextResponse.json(payments.map((p) => ({ ...p, amount: Number(p.amount) })));
@@ -53,6 +54,7 @@ export async function GET(request: NextRequest) {
           client: { select: { id: true, name: true, company: true, clientCode: true } },
           recordedBy: { select: { id: true, name: true, role: true } },
           approvedBy: { select: { id: true, name: true, role: true } },
+          cancelledBy: { select: { id: true, name: true, role: true } },
         },
       }),
       db.payment.count({ where }),

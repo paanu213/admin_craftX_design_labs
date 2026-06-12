@@ -108,6 +108,7 @@ const ROLE_LABELS: Record<string, string> = {
   CFO: "CFO",
   CTO: "CTO",
   COO: "COO",
+  EMPLOYEE: "Employee",
 };
 
 export function DashboardContent({ userName }: { userName: string }) {

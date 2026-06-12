@@ -21,8 +21,10 @@
   `router.refresh()` re-renders the current route and races against the push, leaving the user stuck on the login page even though auth succeeded.
   **Always use `window.location.href = "/"` for post-login redirect** — it forces a full page load so the session cookie is sent and the dashboard server component sees the authenticated session.
 
-- **SUPER_ADMIN permission override must run on EVERY token refresh, not just at sign-in.**
-  In `src/lib/auth.ts`, the `if (token.role === 'SUPER_ADMIN') { token.permissionMatrix = FULL_PERMISSIONS; }` block MUST be placed OUTSIDE the `if (user) { ... }` block so it runs on every JWT callback invocation, not just when a user first signs in.
+- **Access control is PURELY group-based — there is NO role bypass.**
+  The `role` field on a User is a **designation** (job title: CEO, CMO, Employee…) and has zero effect on permissions.
+  Full access is granted only by being in a group with ALL modules × ALL actions = true (i.e. "Super Admin" group with "Grant Full Access" applied).
+  Do NOT add `if (token.role === 'SUPER_ADMIN')` bypasses — they were removed intentionally.
 
 ## CI / Build
 
@@ -52,8 +54,10 @@
 
 - Group permissions are re-fetched on **every JWT token refresh** — permission changes take effect immediately without re-login.
 - If a user is in a group where ALL modules × ALL actions = true → they get `FULL_PERMISSIONS` automatically (any new module added later is covered too).
-- SUPER_ADMIN **role** always overrides to FULL_PERMISSIONS (separate from group membership).
-- To give a user super-admin level access via a group: open User Groups → Manage Permissions → click **"Grant Full Access"** → Save. The user will get full access on their next request (no re-login needed).
+- `role` field = designation only (CEO, CMO, Employee…). It does NOT grant access to anything.
+- To give a user full/super-admin access: add them to the "Super Admin" group (which must have "Grant Full Access" applied).
+- Never check `session.user.role` for access control — always use `canDo(session.user.permissionMatrix, module, action)`.
+- Approval actions (approve payment, approve expense, generate dev password) use `canDo` with the relevant module's `update` or `create` permission, not role checks.
 
 ## Secrets / Environment Variables
 
