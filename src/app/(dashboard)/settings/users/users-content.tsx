@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, UserX, UserCheck, KeyRound, MoreVertical } from "lucide-react";
+import { Plus, UserX, UserCheck, KeyRound, MoreVertical, Edit2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { createUserSchema, type CreateUserFormData } from "@/lib/validations/auth.schema";
@@ -43,6 +43,8 @@ import type { UserGroup, UserRole } from "@/types";
 
 const PAGE_LIMIT = 12;
 
+const ALL_ROLES: UserRole[] = ["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"];
+
 interface SafeUserWithGroups {
   id: string;
   name: string;
@@ -65,14 +67,28 @@ export function UsersContent() {
   const [isResetting, setIsResetting] = useState(false);
   const [page, setPage] = useState(1);
 
+  // Edit user state
+  const [editUser, setEditUser] = useState<SafeUserWithGroups | null>(null);
+  const [editRole, setEditRole] = useState<UserRole>("CEO");
+  const [editGroupIds, setEditGroupIds] = useState<string[]>([]);
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+
   const { data: users, isLoading } = useQuery<SafeUserWithGroups[]>({
     queryKey: ["users"],
-    queryFn: () => fetch("/api/users").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/users");
+      if (!r.ok) throw new Error("Forbidden");
+      return r.json();
+    },
   });
 
   const { data: groups } = useQuery<UserGroup[]>({
     queryKey: ["user-groups"],
-    queryFn: () => fetch("/api/user-groups").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/user-groups");
+      if (!r.ok) return [];
+      return r.json();
+    },
   });
 
   const {
@@ -86,7 +102,7 @@ export function UsersContent() {
     defaultValues: { role: "CEO" },
   });
 
-  const allUsers = users ?? [];
+  const allUsers = Array.isArray(users) ? users : [];
   const totalPages = Math.ceil(allUsers.length / PAGE_LIMIT);
   const pagedUsers = allUsers.slice((page - 1) * PAGE_LIMIT, page * PAGE_LIMIT);
 
@@ -94,6 +110,43 @@ export function UsersContent() {
     setSelectedGroupIds((prev) =>
       prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
     );
+  }
+
+  function toggleEditGroup(groupId: string) {
+    setEditGroupIds((prev) =>
+      prev.includes(groupId) ? prev.filter((id) => id !== groupId) : [...prev, groupId]
+    );
+  }
+
+  function openEditUser(user: SafeUserWithGroups) {
+    setEditUser(user);
+    setEditRole(user.role);
+    setEditGroupIds(user.groupMemberships.map((m) => m.group.id));
+  }
+
+  async function handleSaveEdit() {
+    if (!editUser) return;
+    setIsSavingEdit(true);
+    try {
+      const res = await fetch(`/api/users/${editUser.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          role: editRole,
+          groupIds: editGroupIds,
+        }),
+      });
+      if (res.ok) {
+        toast.success("User updated — changes take effect on their next sign-in");
+        setEditUser(null);
+        queryClient.invalidateQueries({ queryKey: ["users"] });
+      } else {
+        const err = await res.json().catch(() => ({}));
+        toast.error(err.error ?? "Failed to update user");
+      }
+    } finally {
+      setIsSavingEdit(false);
+    }
   }
 
   async function onCreateUser(data: CreateUserFormData) {
@@ -168,7 +221,7 @@ export function UsersContent() {
     }
   }
 
-  function handleDialogClose(open: boolean) {
+  function handleCreateDialogClose(open: boolean) {
     if (!open) {
       setShowCreate(false);
       setSelectedGroupIds([]);
@@ -182,7 +235,7 @@ export function UsersContent() {
     <div className="space-y-4">
       <PageHeader
         title="User Management"
-        description="Manage team members and their access roles"
+        description="Manage team members, roles, and group memberships"
         actions={
           <Button onClick={() => setShowCreate(true)}>
             <Plus className="h-4 w-4" />
@@ -206,26 +259,30 @@ export function UsersContent() {
           ) : (
             <div className="divide-y divide-border">
               {pagedUsers.map((user) => (
-                <div key={user.id} className="flex items-center justify-between px-4 py-4">
-                  <div className="flex items-center gap-3">
-                    <Avatar className="h-9 w-9">
+                <div key={user.id} className="flex items-center justify-between px-4 py-4 gap-2">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <Avatar className="h-9 w-9 shrink-0">
                       <AvatarFallback className="text-xs bg-primary/10 text-primary">
                         {getInitials(user.name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
+                    <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-sm font-medium">{user.name}</p>
                         {!user.isActive && (
                           <Badge variant="muted" className="text-xs">Inactive</Badge>
                         )}
                       </div>
-                      <p className="text-xs text-muted-foreground">{user.email}</p>
+                      <p className="text-xs text-muted-foreground truncate">{user.email}</p>
                     </div>
                   </div>
 
                   <div className="flex items-center gap-2 flex-wrap justify-end">
-                    <Badge variant="secondary">{ROLE_LABELS[user.role]}</Badge>
+                    {/* Role badge */}
+                    <Badge variant={user.role === "SUPER_ADMIN" ? "default" : "secondary"}>
+                      {ROLE_LABELS[user.role] ?? user.role}
+                    </Badge>
+                    {/* Group badges */}
                     {user.groupMemberships?.map((m) => (
                       <Badge key={m.group.id} variant="outline" className="text-xs">
                         {m.group.name}
@@ -241,6 +298,10 @@ export function UsersContent() {
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openEditUser(user)}>
+                          <Edit2 className="h-4 w-4 mr-2" />
+                          Edit Role &amp; Groups
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setResetPasswordUser(user)}>
                           <KeyRound className="h-4 w-4 mr-2" />
                           Reset Password
@@ -284,6 +345,82 @@ export function UsersContent() {
           </div>
         </div>
       )}
+
+      {/* Edit Role & Groups Dialog */}
+      <Dialog open={!!editUser} onOpenChange={(open) => { if (!open) setEditUser(null); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Edit Role &amp; Groups</DialogTitle>
+            <DialogDescription>
+              Change the role and group memberships for{" "}
+              <strong>{editUser?.name}</strong>. Changes take effect on their next sign-in.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={editRole} onValueChange={(v) => setEditRole(v as UserRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ALL_ROLES.map((role) => (
+                    <SelectItem key={role} value={role}>
+                      {ROLE_LABELS[role] ?? role}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {editRole === "SUPER_ADMIN" && (
+                <p className="text-xs text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-md px-3 py-2">
+                  Super Admin has full access to everything, regardless of group permissions.
+                </p>
+              )}
+            </div>
+
+            {activeGroups.length > 0 && (
+              <div className="space-y-2">
+                <Label>Group Memberships</Label>
+                <p className="text-xs text-muted-foreground">
+                  Users can belong to multiple groups. Permissions are combined.
+                </p>
+                <div className="border border-border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
+                  {activeGroups.map((group) => (
+                    <div key={group.id} className="flex items-center gap-2">
+                      <Checkbox
+                        id={`edit-group-${group.id}`}
+                        checked={editGroupIds.includes(group.id)}
+                        onCheckedChange={() => toggleEditGroup(group.id)}
+                      />
+                      <label
+                        htmlFor={`edit-group-${group.id}`}
+                        className="text-sm cursor-pointer select-none flex-1"
+                      >
+                        {group.name}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+                {editGroupIds.length > 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {editGroupIds.length} group{editGroupIds.length !== 1 ? "s" : ""} selected
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="pt-2">
+            <Button variant="outline" onClick={() => setEditUser(null)}>
+              Cancel
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={isSavingEdit}>
+              {isSavingEdit ? "Saving..." : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Reset Password Dialog */}
       <Dialog
@@ -343,7 +480,7 @@ export function UsersContent() {
       </Dialog>
 
       {/* Create User Dialog */}
-      <Dialog open={showCreate} onOpenChange={handleDialogClose}>
+      <Dialog open={showCreate} onOpenChange={handleCreateDialogClose}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Create New User</DialogTitle>
@@ -398,9 +535,9 @@ export function UsersContent() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {(["SUPER_ADMIN", "CEO", "CMO", "CFO", "CTO", "COO"] as UserRole[]).map((role) => (
+                  {ALL_ROLES.map((role) => (
                     <SelectItem key={role} value={role}>
-                      {ROLE_LABELS[role]}
+                      {ROLE_LABELS[role] ?? role}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -422,7 +559,7 @@ export function UsersContent() {
             </div>
 
             <DialogFooter className="pt-2">
-              <Button type="button" variant="outline" onClick={() => handleDialogClose(false)}>
+              <Button type="button" variant="outline" onClick={() => handleCreateDialogClose(false)}>
                 Cancel
               </Button>
               <Button type="submit" disabled={isSubmitting}>

@@ -65,16 +65,23 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             token.groups = [];
             token.permissionMatrix = getPermissionsFromRole(token.role as string);
           }
-
-          // SUPER_ADMIN role always gets full access regardless of group config
-          if (token.role === 'SUPER_ADMIN') {
-            token.permissionMatrix = FULL_PERMISSIONS;
-          }
         } catch {
           token.groups = [];
           token.permissionMatrix = getPermissionsFromRole(token.role as string);
         }
       }
+
+      // Always enforce SUPER_ADMIN full access — runs on every token refresh,
+      // not just sign-in, so role changes take effect without re-logging in.
+      if (token.role === 'SUPER_ADMIN') {
+        token.permissionMatrix = FULL_PERMISSIONS;
+      }
+
+      // Fallback: old sessions that predate the permissionMatrix field
+      if (!token.permissionMatrix && token.role) {
+        token.permissionMatrix = getPermissionsFromRole(token.role as string);
+      }
+
       return token;
     },
     session({ session, token }) {
