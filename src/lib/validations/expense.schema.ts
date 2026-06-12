@@ -8,13 +8,10 @@ export const expenseSchema = z.object({
     .max(200, "Title cannot exceed 200 characters"),
   description: z.string().max(1000, "Description cannot exceed 1000 characters").optional(),
   amount: z
-    .number({ invalid_type_error: "Enter a valid amount" })
+    .number()
     .positive("Amount must be greater than 0"),
   currency: z.enum(SUPPORTED_CURRENCIES).default("INR"),
-  category: z.enum(
-    ["SAAS", "PAYROLL", "MARKETING", "OPERATIONS", "INFRASTRUCTURE", "TRAVEL", "OTHER"],
-    { required_error: "Please select a category" }
-  ),
+  category: z.enum(["SAAS", "PAYROLL", "MARKETING", "OPERATIONS", "INFRASTRUCTURE", "TRAVEL", "OTHER"]),
   expenseDate: z
     .string()
     .min(1, "Expense date is required")

@@ -18,12 +18,12 @@ export const applicationSchema = z.object({
     .optional()
     .or(z.literal("")),
   monthlyPrice: z
-    .number({ invalid_type_error: "Enter a valid price" })
+    .number()
     .min(0, "Price cannot be negative")
     .optional()
     .nullable(),
   yearlyPrice: z
-    .number({ invalid_type_error: "Enter a valid price" })
+    .number()
     .min(0, "Price cannot be negative")
     .optional()
     .nullable(),
