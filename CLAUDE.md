@@ -19,7 +19,24 @@
 
 - **Never use `router.push()` + `router.refresh()` together after sign-in.**
   `router.refresh()` re-renders the current route and races against the push, leaving the user stuck on the login page even though auth succeeded.
-  **Always use `window.location.href = "/"` for post-login redirect** — it forces a full page load so the session cookie is sent and the dashboard server component sees the authenticated session.
+  **Always use `window.location.assign("/")` for post-login redirect** — it forces a full page load so the session cookie is sent and the dashboard server component sees the authenticated session. (`window.location.href = "/"` is equivalent but triggers `react-hooks/immutability` lint error — use `.assign()` instead.)
+
+- **`proxy.ts` MUST use `getToken` from `next-auth/jwt` — NEVER `auth(handler)`.**
+  Using `auth(handler)` in `proxy.ts` runs the full JWT callback on every request, including a DB query for group permissions. When that DB call is slow or times out, `req.auth` returns null → `isLoggedIn = false` → user is redirected to `/login` after a successful login (the post-login loop).
+  **The proxy does ONLY an optimistic cookie/JWT check (`getToken`). Full session validation lives in `(dashboard)/layout.tsx`.**
+  Correct pattern:
+  ```typescript
+  // proxy.ts — keep this exactly as-is, never replace with auth(handler)
+  import { getToken } from "next-auth/jwt";
+  export async function proxy(request: NextRequest) {
+    const token = await getToken({ req: request, secret: process.env.AUTH_SECRET });
+    const isLoggedIn = !!token;
+    if (!isLoggedIn && !isPublic) return NextResponse.redirect(new URL("/login", nextUrl));
+    if (isLoggedIn && isPublic) return NextResponse.redirect(new URL("/", nextUrl));
+  }
+  ```
+
+- **Never add `src/middleware.ts` alongside `src/proxy.ts`.** Next.js 16 uses `proxy.ts` as the middleware file. Having both causes a build error: "Both middleware file and proxy file are detected. Please use proxy.ts only."
 
 - **Access control is PURELY group-based — there is NO role bypass.**
   The `role` field on a User is a **designation** (job title: CEO, CMO, Employee…) and has zero effect on permissions.
@@ -33,6 +50,9 @@
 - **Razorpay SDK must NOT be instantiated at module level.** `new Razorpay({ key_id, key_secret })` throws `key_id or oauthToken is mandatory` at Next.js build time when env vars are absent (CI). Always instantiate it **inside the route handler**, after the env-var guard check.
 
 - **ESLint — exclude `.claude/` from linting.** Agent worktrees at `.claude/worktrees/` contain stale copies of source files and will produce false lint errors. The `eslint.config.mjs` globalIgnores list must include `".claude/**"`.
+
+- **`react-hooks/immutability` — use `window.location.assign("/")` not `window.location.href = "/"`.**
+  Direct property assignment to `window.location.href` is flagged as a mutation of an external value. `window.location.assign("/")` is identical in behavior and passes the rule.
 
 - **`react-hooks/set-state-in-effect`:** Calling `setState()` directly inside a `useEffect` body triggers this rule. Wrap the entire `useEffect` block with `/* eslint-disable react-hooks/set-state-in-effect */` … `/* eslint-enable */` (not `eslint-disable-next-line` on the `useEffect` line — that only suppresses the next line, not the body).
 
