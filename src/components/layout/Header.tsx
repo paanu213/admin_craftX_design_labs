@@ -76,7 +76,10 @@ export function Header({ title }: HeaderProps) {
             <ChangePasswordDialog />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive gap-2 cursor-pointer"
-              onClick={() => signOut({ callbackUrl: "/login" })}
+              onClick={async () => {
+                await signOut({ redirect: false });
+                window.location.assign("/login");
+              }}
             >
               <LogOut className="h-4 w-4" />
               Sign out
