@@ -31,7 +31,7 @@ export default function LoginPage() {
         redirect: false,
       });
 
-      if (!result?.ok) {
+      if (!result?.ok || result?.error) {
         toast.error("Invalid email or password");
         return;
       }
