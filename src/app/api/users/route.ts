@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
 
     const normalizedEmail = result.data.email.toLowerCase();
 
-    const existing = await db.user.findUnique({ where: { email: normalizedEmail } });
+    const existing = await db.user.findFirst({ where: { email: { equals: normalizedEmail, mode: "insensitive" } } });
     if (existing) {
       return NextResponse.json(
         { error: "A user with this email already exists" },
