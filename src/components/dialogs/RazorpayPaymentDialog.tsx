@@ -103,7 +103,21 @@ export function RazorpayPaymentDialog({
         toast.error(data.error ?? "Failed to create payment link");
         return;
       }
-      setCreated(data as CreatedLink);
+      const link = data as CreatedLink;
+      setCreated(link);
+      // Auto-open WhatsApp if phone is available
+      if (client.phone && link.url) {
+        const waPhone = formatWhatsAppPhone(client.phone);
+        const currencySymbol =
+          (link.currency === "USD" && "$") ||
+          (link.currency === "EUR" && "€") ||
+          (link.currency === "GBP" && "£") ||
+          "₹";
+        const msg = encodeURIComponent(
+          `Hi ${client.name},\n\nPlease use the following link to complete your payment of ${currencySymbol}${Number(link.amount).toLocaleString()} for ${client.company}:\n\n${link.url}\n\nThank you!`
+        );
+        window.open(`https://wa.me/${waPhone}?text=${msg}`, "_blank", "noopener,noreferrer");
+      }
     } catch {
       toast.error("Failed to create payment link");
     } finally {

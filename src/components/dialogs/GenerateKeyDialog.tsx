@@ -33,14 +33,15 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { cn } from "@/lib/utils";
-import type { ClientWithRelations } from "@/types";
+import { cn, formatCurrency, formatDate, PAYMENT_METHOD_LABELS } from "@/lib/utils";
+import type { ClientWithRelations, Payment } from "@/types";
 
 interface GenerateKeyDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   client: ClientWithRelations;
   onSuccess: () => void;
+  payments?: Payment[];
 }
 
 type KeyType = "TRIAL" | "SUBSCRIPTION";
@@ -59,12 +60,13 @@ export function GenerateKeyDialog({
   onOpenChange,
   client,
   onSuccess,
+  payments,
 }: GenerateKeyDialogProps) {
   const [step, setStep] = useState<1 | 2>(1);
   const [keyType, setKeyType] = useState<KeyType>("SUBSCRIPTION");
   const [loading, setLoading] = useState(false);
 
-  // Payment fields (for SUBSCRIPTION)
+  // Manual payment fields (used only when no approved payment exists)
   const [amount, setAmount] = useState("");
   const [currency, setCurrency] = useState("INR");
   const [method, setMethod] = useState<PaymentMethod>("CASH");
@@ -75,7 +77,9 @@ export function GenerateKeyDialog({
   const sub = client.subscription;
   const trialExpiry = format(addDays(new Date(), 15), "MMM d, yyyy");
 
-  // Pre-fill amount from subscription when opening
+  // Find most recent approved payment for this client
+  const approvedPayment = payments?.find(p => p.status === "APPROVED") ?? null;
+
   /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
@@ -83,8 +87,7 @@ export function GenerateKeyDialog({
     setNote("");
     setPaymentDate(format(new Date(), "yyyy-MM-dd"));
     if (sub) {
-      const price = Number(sub.price);
-      setAmount(String(price));
+      setAmount(String(Number(sub.price)));
       setCurrency(sub.currency ?? "INR");
     }
   }, [open, sub]);
@@ -106,7 +109,8 @@ export function GenerateKeyDialog({
 
     const body: Record<string, unknown> = { clientId: client.id, keyType };
 
-    if (keyType === "SUBSCRIPTION") {
+    if (keyType === "SUBSCRIPTION" && !approvedPayment) {
+      // Manual payment entry — validate and include in request
       if (!amount || Number(amount) <= 0) {
         toast.error("Enter a valid payment amount");
         setLoading(false);
@@ -121,6 +125,7 @@ export function GenerateKeyDialog({
         note: note || undefined,
       };
     }
+    // If approvedPayment exists, skip sending payment — it's already recorded
 
     const res = await fetch("/api/keys", {
       method: "POST",
@@ -133,7 +138,7 @@ export function GenerateKeyDialog({
       toast.success(
         keyType === "TRIAL"
           ? "Trial key generated — expires in 15 days"
-          : "Activation key generated and payment recorded"
+          : "Activation key generated"
       );
       handleClose(false);
       onSuccess();
@@ -224,11 +229,20 @@ export function GenerateKeyDialog({
                     Paid plan
                   </p>
                   <p className="text-xs text-muted-foreground">
-                    Record payment details
+                    {approvedPayment ? "Payment verified ✓" : "Record payment details"}
                   </p>
                 </div>
               </button>
             </div>
+
+            {keyType === "SUBSCRIPTION" && !approvedPayment && (
+              <div className="flex items-start gap-2 text-sm text-amber-600 bg-amber-50 dark:bg-amber-950/30 rounded-lg px-3 py-2">
+                <AlertCircle className="h-4 w-4 shrink-0 mt-0.5" />
+                <span>
+                  No approved payment found. You can enter payment details manually on the next step, or send a Razorpay payment link first.
+                </span>
+              </div>
+            )}
 
             <DialogFooter>
               <Button variant="outline" onClick={() => handleClose(false)}>
@@ -292,22 +306,76 @@ export function GenerateKeyDialog({
           </>
         )}
 
-        {step === 2 && keyType === "SUBSCRIPTION" && (
+        {step === 2 && keyType === "SUBSCRIPTION" && approvedPayment && (
           <>
             <DialogDescription>
-              Record the payment details for this subscription.
+              Payment verified — ready to generate key.
+            </DialogDescription>
+            <div className="space-y-3 py-2">
+              {sub && (
+                <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm space-y-1">
+                  <p className="font-medium">{sub.planName}</p>
+                  {sub.renewalDate && (
+                    <p className="text-xs text-muted-foreground">
+                      Next renewal: {format(new Date(sub.renewalDate), "MMM d, yyyy")}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 dark:bg-emerald-950/20 dark:border-emerald-900 px-4 py-3 space-y-2">
+                <div className="flex items-center gap-2 text-sm font-medium text-emerald-700 dark:text-emerald-400">
+                  <CheckCircle className="h-4 w-4" />
+                  Payment already recorded
+                </div>
+                <div className="text-sm text-muted-foreground space-y-1">
+                  <div className="flex justify-between">
+                    <span>Amount</span>
+                    <span className="font-medium text-foreground">
+                      {formatCurrency(Number(approvedPayment.amount), approvedPayment.currency)}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Method</span>
+                    <span className="font-medium text-foreground">
+                      {PAYMENT_METHOD_LABELS[approvedPayment.method] ?? approvedPayment.method}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span>Date</span>
+                    <span className="font-medium text-foreground">
+                      {formatDate(approvedPayment.paymentDate)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setStep(1)}>
+                <ChevronLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <Button onClick={handleSubmit} disabled={loading}>
+                {loading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <KeyRound className="h-4 w-4" />
+                )}
+                Generate Key
+              </Button>
+            </DialogFooter>
+          </>
+        )}
+
+        {step === 2 && keyType === "SUBSCRIPTION" && !approvedPayment && (
+          <>
+            <DialogDescription>
+              Enter the payment details for this subscription.
             </DialogDescription>
             <div className="space-y-4 py-1">
               {sub && (
                 <>
                   <div className="rounded-xl bg-muted/50 px-4 py-3 text-sm space-y-1">
                     <p className="font-medium">{sub.planName}</p>
-                    {client.activationKey?.expiresAt && (
-                      <p className="text-xs text-muted-foreground">
-                        Key expires:{" "}
-                        {format(new Date(client.activationKey.expiresAt), "MMM d, yyyy")}
-                      </p>
-                    )}
                     {sub.renewalDate && (
                       <p className="text-xs text-muted-foreground">
                         Next renewal:{" "}
