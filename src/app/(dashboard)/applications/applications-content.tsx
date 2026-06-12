@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import type { AppCategoryMaster } from "@/types";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { Plus, Search, Filter, Eye, Edit, Trash2, MoreVertical } from "lucide-react";
@@ -47,6 +48,12 @@ export function ApplicationsContent() {
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
+
+  const { data: categoriesData } = useQuery<AppCategoryMaster[]>({
+    queryKey: ["app-categories"],
+    queryFn: () => fetch("/api/master-data/categories").then((r) => r.json()),
+  });
+  const categories = categoriesData ?? [];
 
   const { data, isLoading, refetch } = useQuery<ApplicationsResponse>({
     queryKey: ["applications", page, search, categoryFilter, statusFilter],
@@ -106,20 +113,9 @@ export function ApplicationsContent() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="ALL">All Categories</SelectItem>
-            <SelectItem value="BILLING">Billing</SelectItem>
-            <SelectItem value="INVENTORY">Inventory</SelectItem>
-            <SelectItem value="POS">Point of Sale</SelectItem>
-            <SelectItem value="RESTAURANT">Restaurant</SelectItem>
-            <SelectItem value="HOSPITAL">Hospital</SelectItem>
-            <SelectItem value="SCHOOL">School</SelectItem>
-            <SelectItem value="REAL_ESTATE">Real Estate</SelectItem>
-            <SelectItem value="LOGISTICS">Logistics</SelectItem>
-            <SelectItem value="CRM">CRM</SelectItem>
-            <SelectItem value="HR_PAYROLL">HR &amp; Payroll</SelectItem>
-            <SelectItem value="FINANCE">Finance</SelectItem>
-            <SelectItem value="MANUFACTURING">Manufacturing</SelectItem>
-            <SelectItem value="E_COMMERCE">E-Commerce</SelectItem>
-            <SelectItem value="OTHER">Other</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat.key} value={cat.key}>{cat.label}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
         <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
@@ -186,7 +182,7 @@ export function ApplicationsContent() {
                         )}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <Badge variant="secondary">{APP_CATEGORY_LABELS[app.category] ?? app.category}</Badge>
+                        <Badge variant="secondary">{categories.find((c) => c.key === app.category)?.label ?? APP_CATEGORY_LABELS[app.category] ?? app.category}</Badge>
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">v{app.version}</td>
                       <td className="px-4 py-3">

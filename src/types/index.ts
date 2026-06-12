@@ -7,14 +7,13 @@ import type {
   ExpenseApprovalStatus,
   KeyStatus,
   KeyType,
-  AppCategory,
   AppStatus,
   PaymentMethod,
   PaymentReceiver,
   PaymentStatus,
 } from "@/generated/prisma/enums";
 
-export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus, KeyType, AppCategory, AppStatus, PaymentMethod, PaymentReceiver, PaymentStatus };
+export type { UserRole, ClientStatus, BillingCycle, ExpenseCategory, ExpenseStatus, ExpenseApprovalStatus, KeyStatus, KeyType, AppStatus, PaymentMethod, PaymentReceiver, PaymentStatus };
 
 export interface ActivationKey {
   id: string;
@@ -139,7 +138,7 @@ export interface Application {
   id: string;
   name: string;
   description: string | null;
-  category: AppCategory;
+  category: string;
   version: string;
   status: AppStatus;
   logoUrl: string | null;
@@ -217,4 +216,15 @@ export interface DevAccessPassword {
   createdAt: string;
   generatedBy: { id: string; name: string; role: string };
   client?: { id: string; name: string; company: string; clientCode?: string | null };
+}
+
+export interface AppCategoryMaster {
+  id: string;
+  key: string;
+  label: string;
+  isActive: boolean;
+  isSystem: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
 }

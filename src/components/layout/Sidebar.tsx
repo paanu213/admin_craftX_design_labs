@@ -16,6 +16,7 @@ import {
   Banknote,
   Terminal,
   UsersRound,
+  Database,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
@@ -34,6 +35,7 @@ const navItems = [
 ];
 
 const adminItems = [
+  { label: "Master Data", href: "/master-data", icon: Database, permission: "manageUsers" as const },
   { label: "Users", href: "/settings/users", icon: Settings, permission: "manageUsers" as const },
   { label: "User Groups", href: "/settings/user-groups", icon: UsersRound, permission: "manageUsers" as const },
 ];
