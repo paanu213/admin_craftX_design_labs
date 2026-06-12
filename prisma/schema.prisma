@@ -88,6 +88,7 @@ enum PaymentStatus {
   PENDING_APPROVAL
   APPROVED
   REJECTED
+  CANCELLED
 }
 
 enum AppStatus {
@@ -144,6 +145,7 @@ model User {
   applicationsCreated   Application[]       @relation("AppCreatedBy")
   paymentsRecorded      Payment[]           @relation("PaymentRecordedBy")
   paymentsApproved      Payment[]           @relation("PaymentApprovedBy")
+  paymentsCancelled     Payment[]           @relation("PaymentCancelledBy")
   devPasswordsGenerated DevAccessPassword[]  @relation("DevPasswordGeneratedBy")
   systemConfigsUpdated  SystemConfig[]       @relation("ConfigUpdatedBy")
   razorpayLinksCreated  RazorpayPaymentLink[] @relation("RazorpayLinkCreatedBy")
@@ -340,6 +342,9 @@ model Payment {
   approvedById   String?
   approvedAt     DateTime?
   rejectionNote  String?
+  cancelledAt    DateTime?       @map("cancelled_at")
+  cancelledById  String?         @map("cancelled_by_id")
+  cancellationNote String?       @map("cancellation_note")
   createdAt      DateTime        @default(now())
   updatedAt      DateTime        @updatedAt
 
@@ -347,6 +352,7 @@ model Payment {
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
   recordedBy   User          @relation("PaymentRecordedBy", fields: [recordedById], references: [id])
   approvedBy   User?         @relation("PaymentApprovedBy", fields: [approvedById], references: [id])
+  cancelledBy  User?         @relation("PaymentCancelledBy", fields: [cancelledById], references: [id])
 
   @@map("payments")
 }

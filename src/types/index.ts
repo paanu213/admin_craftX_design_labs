@@ -44,10 +44,14 @@ export interface Payment {
   approvedById: string | null;
   approvedAt: string | null;
   rejectionNote: string | null;
+  cancelledAt: string | null;
+  cancelledById: string | null;
+  cancellationNote: string | null;
   createdAt: string;
   updatedAt: string;
   recordedBy: { id: string; name: string; role: string };
   approvedBy: { id: string; name: string; role: string } | null;
+  cancelledBy: { id: string; name: string; role: string } | null;
   client?: { id: string; name: string; company: string; clientCode?: string | null };
 }
 

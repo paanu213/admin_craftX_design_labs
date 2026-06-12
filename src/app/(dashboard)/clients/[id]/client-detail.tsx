@@ -36,17 +36,30 @@ import {
   QrCode,
   ExternalLink,
   Check,
+  Eye,
+  Ban,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -68,8 +81,6 @@ import {
   CLIENT_STATUS_LABELS,
   CLIENT_STATUS_VARIANT,
   BILLING_CYCLE_LABELS,
-  PAYMENT_METHOD_LABELS,
-  PAYMENT_RECEIVER_LABELS,
   PAYMENT_STATUS_LABELS,
   PAYMENT_STATUS_VARIANT,
   KEY_TYPE_LABELS,
@@ -125,6 +136,9 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const [approvingId, setApprovingId] = useState<string | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [rejectionNote, setRejectionNote] = useState<Record<string, string>>({});
+  const [cancelPayment, setCancelPayment] = useState<Payment | null>(null);
+  const [cancellationNote, setCancellationNote] = useState("");
+  const [isCancelling, setIsCancelling] = useState(false);
 
   const { data: client, isLoading } = useQuery<ClientWithRelations>({
     queryKey: ["client", clientId],
@@ -261,6 +275,30 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     } else {
       const err = await res.json().catch(() => ({}));
       toast.error(err.error ?? "Failed to reject");
+    }
+  }
+
+  async function handleCancelPayment() {
+    if (!cancelPayment) return;
+    if (!cancellationNote.trim()) {
+      toast.error("Enter a cancellation reason");
+      return;
+    }
+    setIsCancelling(true);
+    const res = await fetch(`/api/payments/${cancelPayment.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "cancel", cancellationNote: cancellationNote.trim() }),
+    });
+    setIsCancelling(false);
+    if (res.ok) {
+      toast.success("Payment cancelled");
+      setCancelPayment(null);
+      setCancellationNote("");
+      refetchPayments();
+    } else {
+      const err = await res.json().catch(() => ({}));
+      toast.error(err.error ?? "Failed to cancel payment");
     }
   }
 
@@ -694,165 +732,220 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {!payments || payments.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
               <Banknote className="h-7 w-7 text-muted-foreground/40" />
               <p className="text-sm text-muted-foreground">No payments recorded yet</p>
             </div>
           ) : (
-            <div className="space-y-3">
-              {payments.map((payment) => (
-                <div
-                  key={payment.id}
-                  className="border border-border rounded-lg p-3 space-y-2"
-                >
-                  <div className="flex items-start justify-between gap-2 flex-wrap">
-                    <div>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-sm">
+            <>
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Recorded By</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {payments.slice(0, 5).map((payment) => (
+                      <TableRow key={payment.id}>
+                        <TableCell className="font-semibold text-sm">
                           {formatCurrency(payment.amount, payment.currency)}
-                        </span>
-                        <Badge
-                          variant={
-                            PAYMENT_STATUS_VARIANT[payment.status] ?? "secondary"
-                          }
-                          className="text-xs"
-                        >
-                          {PAYMENT_STATUS_LABELS[payment.status]}
-                        </Badge>
-                        {payment.isRenewal && (
-                          <Badge variant="secondary" className="text-xs">
-                            Renewal
+                        </TableCell>
+                        <TableCell>
+                          <Badge
+                            variant={PAYMENT_STATUS_VARIANT[payment.status] ?? "secondary"}
+                            className="text-xs whitespace-nowrap"
+                          >
+                            {PAYMENT_STATUS_LABELS[payment.status]}
                           </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        {PAYMENT_METHOD_LABELS[payment.method]} ·{" "}
-                        {PAYMENT_RECEIVER_LABELS[payment.receivedBy]} ·{" "}
-                        {formatDate(payment.paymentDate)}
-                      </p>
-                      {payment.note && (
-                        <p className="text-xs text-muted-foreground mt-0.5 italic">
-                          {payment.note}
-                        </p>
-                      )}
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Recorded by {payment.recordedBy.name}
-                      </p>
-                      {payment.status === "REJECTED" && payment.rejectionNote && (
-                        <p className="text-xs text-destructive mt-1">
-                          Rejected: {payment.rejectionNote}
-                        </p>
-                      )}
-                    </div>
-
-                    <div className="flex flex-col items-end gap-1.5">
-                      {/* Employee: deposit button */}
-                      {payment.status === "PENDING_DEPOSIT" &&
-                        payment.recordedById === session?.user?.id && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            onClick={() => handleDepositPayment(payment.id)}
-                            disabled={depositingId === payment.id}
-                          >
-                            {depositingId === payment.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <ArrowUpCircle className="h-3 w-3" />
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary" className="text-xs">
+                            {payment.isRenewal ? "Renewal" : "Payment"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                          {formatDate(payment.paymentDate)}
+                        </TableCell>
+                        <TableCell className="text-xs text-muted-foreground">
+                          {payment.recordedBy.name}
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="View details"
+                              onClick={() => router.push(`/clients/${clientId}/payments`)}
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Button>
+                            {payment.status === "PENDING_DEPOSIT" &&
+                              payment.recordedById === session?.user?.id && (
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-blue-600"
+                                  title="Mark deposited"
+                                  onClick={() => handleDepositPayment(payment.id)}
+                                  disabled={depositingId === payment.id}
+                                >
+                                  {depositingId === payment.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <ArrowUpCircle className="h-3.5 w-3.5" />
+                                  )}
+                                </Button>
+                              )}
+                            {isCEO && payment.status === "PENDING_APPROVAL" && (
+                              <>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-emerald-600"
+                                  title="Approve"
+                                  onClick={() => handleApprovePayment(payment.id)}
+                                  disabled={approvingId === payment.id}
+                                >
+                                  {approvingId === payment.id ? (
+                                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                  ) : (
+                                    <CheckCircle className="h-3.5 w-3.5" />
+                                  )}
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-7 w-7 text-destructive"
+                                  title="Reject"
+                                  onClick={() =>
+                                    setRejectionNote((prev) => ({
+                                      ...prev,
+                                      [payment.id]: prev[payment.id] ?? "",
+                                    }))
+                                  }
+                                >
+                                  <XCircle className="h-3.5 w-3.5" />
+                                </Button>
+                              </>
                             )}
-                            Mark Deposited
-                          </Button>
-                        )}
-
-                      {/* CEO: approve/reject */}
-                      {isCEO && payment.status === "PENDING_APPROVAL" && (
-                        <div className="flex items-center gap-1.5">
-                          <Button
-                            size="sm"
-                            className="h-7 text-xs bg-emerald-600 hover:bg-emerald-700"
-                            onClick={() => handleApprovePayment(payment.id)}
-                            disabled={approvingId === payment.id}
-                          >
-                            {approvingId === payment.id ? (
-                              <Loader2 className="h-3 w-3 animate-spin" />
-                            ) : (
-                              <CheckCircle className="h-3 w-3" />
+                            {payment.status !== "CANCELLED" && payment.status !== "APPROVED" && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                title="Cancel payment"
+                                onClick={() => { setCancelPayment(payment); setCancellationNote(""); }}
+                              >
+                                <Ban className="h-3.5 w-3.5" />
+                              </Button>
                             )}
-                            Approve
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs text-destructive hover:text-destructive"
-                            onClick={() =>
-                              setRejectionNote((prev) => ({
-                                ...prev,
-                                [payment.id]: prev[payment.id] ?? "",
-                              }))
-                            }
-                          >
-                            <XCircle className="h-3 w-3" />
-                            Reject
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* CEO reject inline input */}
-                  {isCEO &&
-                    payment.status === "PENDING_APPROVAL" &&
-                    rejectionNote[payment.id] !== undefined && (
-                      <div className="flex gap-2 items-center mt-1">
-                        <input
-                          className="flex-1 text-xs border border-border rounded px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring"
-                          placeholder="Rejection reason..."
-                          value={rejectionNote[payment.id]}
-                          onChange={(e) =>
-                            setRejectionNote((prev) => ({
-                              ...prev,
-                              [payment.id]: e.target.value,
-                            }))
-                          }
-                        />
-                        <Button
-                          size="sm"
-                          className="h-6 text-xs"
-                          variant="destructive"
-                          onClick={() => handleRejectPayment(payment.id)}
-                          disabled={rejectingId === payment.id}
-                        >
-                          {rejectingId === payment.id ? (
-                            <Loader2 className="h-3 w-3 animate-spin" />
-                          ) : (
-                            "Confirm"
-                          )}
-                        </Button>
-                        <Button
-                          size="sm"
-                          className="h-6 text-xs"
-                          variant="ghost"
-                          onClick={() =>
-                            setRejectionNote((prev) => {
-                              const next = { ...prev };
-                              delete next[payment.id];
-                              return next;
-                            })
-                          }
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    )}
+                          </div>
+                          {/* Inline reject input */}
+                          {isCEO &&
+                            payment.status === "PENDING_APPROVAL" &&
+                            rejectionNote[payment.id] !== undefined && (
+                              <div className="flex gap-1 items-center mt-1">
+                                <input
+                                  className="flex-1 text-xs border border-border rounded px-2 py-1 bg-background focus:outline-none focus:ring-1 focus:ring-ring min-w-0"
+                                  placeholder="Rejection reason..."
+                                  value={rejectionNote[payment.id]}
+                                  onChange={(e) =>
+                                    setRejectionNote((prev) => ({
+                                      ...prev,
+                                      [payment.id]: e.target.value,
+                                    }))
+                                  }
+                                />
+                                <Button
+                                  size="sm"
+                                  className="h-6 text-xs shrink-0"
+                                  variant="destructive"
+                                  onClick={() => handleRejectPayment(payment.id)}
+                                  disabled={rejectingId === payment.id}
+                                >
+                                  {rejectingId === payment.id ? (
+                                    <Loader2 className="h-3 w-3 animate-spin" />
+                                  ) : "Confirm"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="h-6 text-xs shrink-0"
+                                  variant="ghost"
+                                  onClick={() =>
+                                    setRejectionNote((prev) => {
+                                      const next = { ...prev };
+                                      delete next[payment.id];
+                                      return next;
+                                    })
+                                  }
+                                >
+                                  ✕
+                                </Button>
+                              </div>
+                            )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+              {payments.length > 5 && (
+                <div className="px-4 py-3 border-t border-border">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="text-xs text-primary w-full"
+                    onClick={() => router.push(`/clients/${clientId}/payments`)}
+                  >
+                    View all {payments.length} payments →
+                  </Button>
                 </div>
-              ))}
-            </div>
+              )}
+            </>
           )}
         </CardContent>
       </Card>
+
+      {/* Cancel Payment Dialog */}
+      <Dialog open={!!cancelPayment} onOpenChange={(open) => { if (!open) { setCancelPayment(null); setCancellationNote(""); } }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Cancel Payment</DialogTitle>
+            <DialogDescription>
+              {cancelPayment && (
+                <>Cancel {formatCurrency(cancelPayment.amount, cancelPayment.currency)} recorded on {formatDate(cancelPayment.paymentDate)}? This cannot be undone.</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2">
+            <Label htmlFor="cancel-note">Reason for cancellation *</Label>
+            <Textarea
+              id="cancel-note"
+              placeholder="Enter the reason for cancelling this payment..."
+              rows={3}
+              value={cancellationNote}
+              onChange={(e) => setCancellationNote(e.target.value)}
+            />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setCancelPayment(null); setCancellationNote(""); }}>
+              Keep Payment
+            </Button>
+            <Button variant="destructive" onClick={handleCancelPayment} disabled={isCancelling}>
+              {isCancelling ? <><Loader2 className="h-4 w-4 animate-spin mr-1" />Cancelling...</> : "Cancel Payment"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Razorpay Payment Links */}
       <Card>
