@@ -4,12 +4,10 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { canDo } from "@/lib/permissions";
 
-const CHARSET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
 function generateDevPassword(): string {
-  const raw = randomBytes(12);
-  const chars = Array.from(raw, (byte: number) => CHARSET[byte % 32]).join("");
-  return `CXD-${chars.slice(0, 4)}-${chars.slice(4, 8)}-${chars.slice(8, 12)}`;
+  // Cryptographically random 6-digit number (100000–999999)
+  const n = parseInt(randomBytes(3).toString("hex"), 16) % 900000 + 100000;
+  return n.toString();
 }
 
 function hashPassword(password: string): string {
@@ -40,6 +38,7 @@ export async function GET(request: NextRequest) {
         clientId: true,
         generatedById: true,
         reason: true,
+        password: true,
         expiresAt: true,
         usedAt: true,
         usedFromIp: true,
@@ -49,7 +48,14 @@ export async function GET(request: NextRequest) {
       },
     });
 
-    return NextResponse.json(passwords);
+    const now = new Date();
+    return NextResponse.json(
+      passwords.map((p) => ({
+        ...p,
+        // Only expose plaintext while the password is still active
+        password: !p.usedAt && new Date(p.expiresAt) > now ? p.password : null,
+      }))
+    );
   } catch (error) {
     console.error("[GET /api/dev-passwords]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
@@ -103,6 +109,7 @@ export async function POST(request: NextRequest) {
         clientId,
         generatedById: session.user.id,
         passwordHash,
+        password: plaintext,
         reason: reason.trim(),
         expiresAt,
       },

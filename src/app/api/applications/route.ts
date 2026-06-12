@@ -13,6 +13,8 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get("search") ?? "";
     const category = searchParams.get("category");
     const status = searchParams.get("status");
+    const page = Math.max(1, Number(searchParams.get("page") ?? 1));
+    const limit = Math.max(1, Math.min(100, Number(searchParams.get("limit") ?? 12)));
 
     const where = {
       ...(search && { name: { contains: search, mode: "insensitive" as const } }),
@@ -20,14 +22,19 @@ export async function GET(request: NextRequest) {
       ...(status && status !== "ALL" && { status: status as any }),
     };
 
-    const apps = await db.application.findMany({
-      where,
-      orderBy: { createdAt: "desc" },
-      include: {
-        createdBy: { select: { id: true, name: true, role: true } },
-        _count: { select: { subscriptions: true } },
-      },
-    });
+    const [apps, total] = await Promise.all([
+      db.application.findMany({
+        where,
+        skip: (page - 1) * limit,
+        take: limit,
+        orderBy: { createdAt: "desc" },
+        include: {
+          createdBy: { select: { id: true, name: true, role: true } },
+          _count: { select: { subscriptions: true } },
+        },
+      }),
+      db.application.count({ where }),
+    ]);
 
     const activeCountsRaw = await db.subscription.groupBy({
       by: ["applicationId"],
@@ -47,7 +54,10 @@ export async function GET(request: NextRequest) {
       activeSubscriptions: activeMap[app.id] ?? 0,
     }));
 
-    return NextResponse.json({ data });
+    return NextResponse.json({
+      data,
+      meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
+    });
   } catch (error) {
     console.error("[GET /api/applications]", error);
     return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });

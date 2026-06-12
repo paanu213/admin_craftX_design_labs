@@ -36,18 +36,24 @@ import type { Application } from "@/types";
 
 interface ApplicationsResponse {
   data: Application[];
+  meta: { page: number; limit: number; total: number; totalPages: number };
 }
+
+const PAGE_LIMIT = 12;
 
 export function ApplicationsContent() {
   const router = useRouter();
   const [search, setSearch] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("ALL");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [page, setPage] = useState(1);
 
   const { data, isLoading, refetch } = useQuery<ApplicationsResponse>({
-    queryKey: ["applications", search, categoryFilter, statusFilter],
+    queryKey: ["applications", page, search, categoryFilter, statusFilter],
     queryFn: () => {
       const params = new URLSearchParams({
+        page: String(page),
+        limit: String(PAGE_LIMIT),
         ...(search && { search }),
         ...(categoryFilter !== "ALL" && { category: categoryFilter }),
         ...(statusFilter !== "ALL" && { status: statusFilter }),
@@ -89,11 +95,11 @@ export function ApplicationsContent() {
           <Input
             placeholder="Search applications..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
             className="pl-9"
           />
         </div>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+        <Select value={categoryFilter} onValueChange={(v) => { setCategoryFilter(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-44">
             <Filter className="h-4 w-4 mr-1 text-muted-foreground" />
             <SelectValue placeholder="Category" />
@@ -109,14 +115,14 @@ export function ApplicationsContent() {
             <SelectItem value="REAL_ESTATE">Real Estate</SelectItem>
             <SelectItem value="LOGISTICS">Logistics</SelectItem>
             <SelectItem value="CRM">CRM</SelectItem>
-            <SelectItem value="HR_PAYROLL">HR & Payroll</SelectItem>
+            <SelectItem value="HR_PAYROLL">HR &amp; Payroll</SelectItem>
             <SelectItem value="FINANCE">Finance</SelectItem>
             <SelectItem value="MANUFACTURING">Manufacturing</SelectItem>
             <SelectItem value="E_COMMERCE">E-Commerce</SelectItem>
             <SelectItem value="OTHER">Other</SelectItem>
           </SelectContent>
         </Select>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
+        <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
           <SelectTrigger className="w-full sm:w-40">
             <SelectValue placeholder="Status" />
           </SelectTrigger>
@@ -142,11 +148,7 @@ export function ApplicationsContent() {
             <div className="flex flex-col items-center justify-center py-16 gap-3">
               <p className="text-muted-foreground text-sm">No applications found</p>
               <RoleGuard permission="createApplications">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => router.push("/applications/new")}
-                >
+                <Button variant="outline" size="sm" onClick={() => router.push("/applications/new")}>
                   <Plus className="h-4 w-4" />
                   Add your first application
                 </Button>
@@ -157,36 +159,16 @@ export function ApplicationsContent() {
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Application
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
-                      Category
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">
-                      Version
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Monthly
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">
-                      Yearly
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">
-                      Clients
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">
-                      Active Subs
-                    </th>
-                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">
-                      Added by
-                    </th>
-                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">
-                      Actions
-                    </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Application</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">Category</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden sm:table-cell">Version</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">Status</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Monthly</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden lg:table-cell">Yearly</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Clients</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground hidden md:table-cell">Active Subs</th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden xl:table-cell">Added by</th>
+                    <th className="px-4 py-3 text-right font-medium text-muted-foreground">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -196,12 +178,7 @@ export function ApplicationsContent() {
                       className="border-b border-border last:border-0 hover:bg-muted/30 transition-colors"
                     >
                       <td className="px-4 py-3">
-                        <button
-                          className="font-medium text-foreground hover:text-primary hover:underline text-left"
-                          onClick={() => router.push(`/applications/${app.id}`)}
-                        >
-                          {app.name}
-                        </button>
+                        <p className="font-medium text-foreground">{app.name}</p>
                         {app.description && (
                           <p className="text-xs text-muted-foreground truncate max-w-[200px]">
                             {app.description}
@@ -209,27 +186,17 @@ export function ApplicationsContent() {
                         )}
                       </td>
                       <td className="px-4 py-3 hidden md:table-cell">
-                        <Badge variant="secondary">
-                          {APP_CATEGORY_LABELS[app.category] ?? app.category}
-                        </Badge>
+                        <Badge variant="secondary">{APP_CATEGORY_LABELS[app.category] ?? app.category}</Badge>
                       </td>
-                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">
-                        v{app.version}
-                      </td>
+                      <td className="px-4 py-3 hidden sm:table-cell text-muted-foreground">v{app.version}</td>
                       <td className="px-4 py-3">
-                        <Badge variant={APP_STATUS_VARIANT[app.status]}>
-                          {APP_STATUS_LABELS[app.status]}
-                        </Badge>
+                        <Badge variant={APP_STATUS_VARIANT[app.status]}>{APP_STATUS_LABELS[app.status]}</Badge>
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
-                        {app.monthlyPrice != null
-                          ? formatCurrency(app.monthlyPrice, app.currency)
-                          : <span className="text-xs">—</span>}
+                        {app.monthlyPrice != null ? formatCurrency(app.monthlyPrice, app.currency) : <span className="text-xs">—</span>}
                       </td>
                       <td className="px-4 py-3 hidden lg:table-cell text-muted-foreground">
-                        {app.yearlyPrice != null
-                          ? formatCurrency(app.yearlyPrice, app.currency)
-                          : <span className="text-xs">—</span>}
+                        {app.yearlyPrice != null ? formatCurrency(app.yearlyPrice, app.currency) : <span className="text-xs">—</span>}
                       </td>
                       <td className="px-4 py-3 text-right hidden md:table-cell text-muted-foreground">
                         {app._count?.subscriptions ?? 0}
@@ -259,9 +226,7 @@ export function ApplicationsContent() {
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
                               <RoleGuard permission="editApplications">
-                                <DropdownMenuItem
-                                  onClick={() => router.push(`/applications/${app.id}/edit`)}
-                                >
+                                <DropdownMenuItem onClick={() => router.push(`/applications/${app.id}/edit`)}>
                                   <Edit className="h-4 w-4 mr-2" />
                                   Edit
                                 </DropdownMenuItem>
@@ -288,6 +253,29 @@ export function ApplicationsContent() {
           )}
         </CardContent>
       </Card>
+
+      {/* Pagination */}
+      {data?.meta && data.meta.totalPages > 1 && (
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between text-sm">
+          <p className="text-muted-foreground text-center sm:text-left">
+            Showing {(page - 1) * PAGE_LIMIT + 1}–
+            {Math.min(page * PAGE_LIMIT, data.meta.total)} of {data.meta.total} applications
+          </p>
+          <div className="flex gap-2 justify-center sm:justify-end">
+            <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(page - 1)}>
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              disabled={page === data.meta.totalPages}
+              onClick={() => setPage(page + 1)}
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

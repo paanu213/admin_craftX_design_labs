@@ -209,6 +209,7 @@ export interface DevAccessPassword {
   clientId: string;
   generatedById: string;
   reason: string;
+  password: string | null;
   expiresAt: string;
   usedAt: string | null;
   usedFromIp: string | null;
