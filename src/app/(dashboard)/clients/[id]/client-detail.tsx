@@ -152,14 +152,14 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const { data: payments, refetch: refetchPayments } = useQuery<Payment[]>({
     queryKey: ["client-payments", clientId],
     queryFn: () =>
-      fetch(`/api/payments?clientId=${clientId}`).then((r) => r.json()),
+      fetch(`/api/payments?clientId=${clientId}`).then((r) => r.ok ? r.json() : []),
     enabled: !!clientId,
   });
 
   const { data: razorpayLinks, refetch: refetchRazorpayLinks } = useQuery<RazorpayPaymentLink[]>({
     queryKey: ["client-razorpay-links", clientId],
     queryFn: () =>
-      fetch(`/api/razorpay/payment-link?clientId=${clientId}`).then((r) => r.json()),
+      fetch(`/api/razorpay/payment-link?clientId=${clientId}`).then((r) => r.ok ? r.json() : []),
     enabled: !!clientId,
   });
 
@@ -395,7 +395,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const ak = client.activationKey;
   const isCEO = !!(session?.user?.permissionMatrix && canDo(session.user.permissionMatrix, "payments", "update"));
 
-  const hasApprovedPayment = payments?.some(p => p.status === "APPROVED") ?? false;
+  const hasApprovedPayment = Array.isArray(payments) && payments.some(p => p.status === "APPROVED");
   const hasSubscription = !!client.subscription;
   const paymentRequiredForKey = hasSubscription && !hasApprovedPayment;
 
