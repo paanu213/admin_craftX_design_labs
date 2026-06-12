@@ -102,6 +102,16 @@ export async function PUT(
       }
     }
 
+    // Check email uniqueness if changing email
+    if (result.data.email && result.data.email.toLowerCase() !== existing.email.toLowerCase()) {
+      const emailTaken = await db.user.findFirst({
+        where: { email: { equals: result.data.email, mode: "insensitive" }, NOT: { id } },
+      });
+      if (emailTaken) {
+        return NextResponse.json({ error: "This email address is already in use" }, { status: 409 });
+      }
+    }
+
     const hashedPassword = result.data.password
       ? await bcrypt.hash(result.data.password, 10)
       : undefined;
@@ -110,6 +120,7 @@ export async function PUT(
       where: { id },
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
+        ...(result.data.email !== undefined && { email: result.data.email.toLowerCase() }),
         ...(result.data.role !== undefined && {
           role: result.data.role as Parameters<typeof db.user.update>[0]["data"]["role"],
         }),
