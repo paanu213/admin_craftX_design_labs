@@ -240,10 +240,6 @@ export function GenerateDevPasswordDialog({
                 </div>
               </div>
 
-              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-200">
-                <strong>This password will not be shown again.</strong> Copy it now before closing.
-              </div>
-
               <p className="text-sm text-muted-foreground">
                 Expires in {generated.expiryHours} hour{generated.expiryHours !== 1 ? "s" : ""} on{" "}
                 <strong>{formatDate(generated.expiresAt, "MMM d, yyyy 'at' h:mm a")}</strong>

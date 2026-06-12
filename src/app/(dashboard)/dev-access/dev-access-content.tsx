@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { Plus, Terminal, Save } from "lucide-react";
+import { Plus, Terminal, Save, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -36,6 +36,17 @@ interface DevAccessContentProps {
 export function DevAccessContent({ userRole }: DevAccessContentProps) {
   const isFounder = FOUNDER_ROLES.includes(userRole);
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [copiedId, setCopiedId] = useState<string | null>(null);
+
+  async function copyPassword(id: string, password: string) {
+    try {
+      await navigator.clipboard.writeText(password);
+      setCopiedId(id);
+      setTimeout(() => setCopiedId(null), 2000);
+    } catch {
+      // clipboard not available
+    }
+  }
   const [expiryHours, setExpiryHours] = useState<string>("2");
   const [settingsLoaded, setSettingsLoaded] = useState(false);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -185,6 +196,9 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground">
                       Client
                     </th>
+                    <th className="px-4 py-3 text-left font-medium text-muted-foreground">
+                      Password
+                    </th>
                     <th className="px-4 py-3 text-left font-medium text-muted-foreground hidden md:table-cell">
                       Reason
                     </th>
@@ -221,6 +235,28 @@ export function DevAccessContent({ userRole }: DevAccessContentProps) {
                             <p className="text-xs text-muted-foreground">
                               {record.client.company}
                             </p>
+                          )}
+                        </td>
+                        <td className="px-4 py-3">
+                          {status === "ACTIVE" && record.password ? (
+                            <div className="flex items-center gap-1.5">
+                              <code className="font-mono font-bold text-base tracking-widest text-foreground">
+                                {record.password}
+                              </code>
+                              <button
+                                onClick={() => copyPassword(record.id, record.password!)}
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                                title="Copy password"
+                              >
+                                {copiedId === record.id ? (
+                                  <Check className="h-3.5 w-3.5 text-emerald-600" />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">—</span>
                           )}
                         </td>
                         <td className="px-4 py-3 hidden md:table-cell">

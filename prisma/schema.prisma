@@ -371,6 +371,7 @@ model DevAccessPassword {
   clientId      String
   generatedById String
   passwordHash  String
+  password      String?
   reason        String
   expiresAt     DateTime
   usedAt        DateTime?
