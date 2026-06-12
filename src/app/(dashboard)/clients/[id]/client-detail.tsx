@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
+import { QRCodeSVG } from "qrcode.react";
 import {
   ArrowLeft,
   Edit,
@@ -31,10 +32,21 @@ import {
   ArrowUpCircle,
   Link2,
   AlertCircle,
+  MessageCircle,
+  QrCode,
+  ExternalLink,
+  Check,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -62,7 +74,7 @@ import {
   PAYMENT_STATUS_VARIANT,
   KEY_TYPE_LABELS,
 } from "@/lib/utils";
-import type { ClientWithRelations, Payment } from "@/types";
+import type { ClientWithRelations, Payment, RazorpayPaymentLink } from "@/types";
 import { useSession } from "next-auth/react";
 
 const KEY_STATUS_VARIANT: Record<string, "success" | "warning" | "destructive" | "secondary"> = {
@@ -104,6 +116,8 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const [renewPaymentOpen, setRenewPaymentOpen] = useState(false);
   const [razorpayOpen, setRazorpayOpen] = useState(false);
+  const [qrLink, setQrLink] = useState<RazorpayPaymentLink | null>(null);
+  const [copiedLinkId, setCopiedLinkId] = useState<string | null>(null);
 
   // Payment action states
   const [depositingId, setDepositingId] = useState<string | null>(null);
@@ -124,6 +138,13 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     queryKey: ["client-payments", clientId],
     queryFn: () =>
       fetch(`/api/payments?clientId=${clientId}`).then((r) => r.json()),
+    enabled: !!clientId,
+  });
+
+  const { data: razorpayLinks, refetch: refetchRazorpayLinks } = useQuery<RazorpayPaymentLink[]>({
+    queryKey: ["client-razorpay-links", clientId],
+    queryFn: () =>
+      fetch(`/api/razorpay/payment-link?clientId=${clientId}`).then((r) => r.json()),
     enabled: !!clientId,
   });
 
@@ -242,6 +263,35 @@ export function ClientDetail({ clientId }: { clientId: string }) {
     }
   }
 
+  function formatWhatsAppPhone(phone: string): string {
+    const cleaned = phone.replace(/[\s\-()]/g, "");
+    if (cleaned.startsWith("+")) return cleaned.replace("+", "");
+    if (cleaned.startsWith("91") && cleaned.length === 12) return cleaned;
+    if (cleaned.length === 10) return `91${cleaned}`;
+    return cleaned;
+  }
+
+  async function copyPaymentLink(link: RazorpayPaymentLink) {
+    try {
+      await navigator.clipboard.writeText(link.url);
+      setCopiedLinkId(link.id);
+      toast.success("Link copied");
+      setTimeout(() => setCopiedLinkId(null), 2000);
+    } catch {
+      toast.error("Failed to copy");
+    }
+  }
+
+  function shareViaWhatsApp(link: RazorpayPaymentLink) {
+    if (!client?.phone) return;
+    const waPhone = formatWhatsAppPhone(client.phone);
+    const symbol = link.currency === "USD" ? "$" : link.currency === "EUR" ? "€" : link.currency === "GBP" ? "£" : "₹";
+    const msg = encodeURIComponent(
+      `Hi ${client.name},\n\nPlease use the following link to complete your payment of ${symbol}${Number(link.amount).toLocaleString()} for ${client.company}:\n\n${link.url}\n\nThank you!`
+    );
+    window.open(`https://wa.me/${waPhone}?text=${msg}`, "_blank", "noopener,noreferrer");
+  }
+
   if (isLoading) {
     return (
       <div className="space-y-4 max-w-4xl">
@@ -306,10 +356,15 @@ export function ClientDetail({ clientId }: { clientId: string }) {
   const ak = client.activationKey;
   const isCEO = ["CEO", "SUPER_ADMIN"].includes(session?.user?.role ?? "");
 
-  // Payment gate: subscription clients need at least one approved payment before key generation
   const hasApprovedPayment = payments?.some(p => p.status === "APPROVED") ?? false;
   const hasSubscription = !!client.subscription;
   const paymentRequiredForKey = hasSubscription && !hasApprovedPayment;
+
+  // Smart Record Payment vs Record Renewal: client is "active" if they have an approved
+  // payment AND their status indicates they're currently on an active plan.
+  const hasActivePlan =
+    hasApprovedPayment &&
+    (client.status === "ACTIVE" || client.status === "KEY_GENERATED");
 
   return (
     <div className="space-y-6 max-w-4xl">
@@ -340,8 +395,48 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             open={razorpayOpen}
             onOpenChange={setRazorpayOpen}
             client={client}
-            onSuccess={refetchPayments}
+            onSuccess={refetchRazorpayLinks}
           />
+
+          {/* QR Code dialog for payment links */}
+          <Dialog open={!!qrLink} onOpenChange={(open) => { if (!open) setQrLink(null); }}>
+            <DialogContent className="sm:max-w-xs">
+              <DialogHeader>
+                <DialogTitle>Payment QR Code</DialogTitle>
+                <DialogDescription>
+                  {qrLink && (
+                    <>
+                      {qrLink.currency === "INR" ? "₹" : qrLink.currency}{Number(qrLink.amount).toLocaleString()}
+                      {qrLink.description ? ` · ${qrLink.description}` : ""}
+                    </>
+                  )}
+                </DialogDescription>
+              </DialogHeader>
+              {qrLink && (
+                <div className="flex flex-col items-center gap-4 py-2">
+                  <div className="rounded-xl border bg-white p-4 shadow-sm">
+                    <QRCodeSVG value={qrLink.url} size={200} level="M" includeMargin={false} />
+                  </div>
+                  <p className="text-xs text-muted-foreground text-center">
+                    Scan with phone camera or payment app to open the payment page.
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2"
+                    onClick={() => copyPaymentLink(qrLink)}
+                  >
+                    {copiedLinkId === qrLink.id ? (
+                      <Check className="h-3.5 w-3.5 text-emerald-600" />
+                    ) : (
+                      <Copy className="h-3.5 w-3.5" />
+                    )}
+                    Copy link
+                  </Button>
+                </div>
+              )}
+            </DialogContent>
+          </Dialog>
         </>
       )}
 
@@ -575,28 +670,7 @@ export function ClientDetail({ clientId }: { clientId: string }) {
             </CardTitle>
             <div className="flex gap-2 flex-wrap">
               <RoleGuard permission="recordPayments">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRazorpayOpen(true)}
-                  className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
-                >
-                  <Link2 className="h-3.5 w-3.5" />
-                  Send Payment Link
-                </Button>
-              </RoleGuard>
-              <RoleGuard permission="recordPayments">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRecordPaymentOpen(true)}
-                >
-                  <PlusCircle className="h-3.5 w-3.5" />
-                  Record Payment
-                </Button>
-              </RoleGuard>
-              {client.subscription && (
-                <RoleGuard permission="recordPayments">
+                {hasActivePlan && hasSubscription ? (
                   <Button
                     variant="outline"
                     size="sm"
@@ -605,8 +679,17 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                     <ArrowUpCircle className="h-3.5 w-3.5" />
                     Record Renewal
                   </Button>
-                </RoleGuard>
-              )}
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setRecordPaymentOpen(true)}
+                  >
+                    <PlusCircle className="h-3.5 w-3.5" />
+                    Record Payment
+                  </Button>
+                )}
+              </RoleGuard>
             </div>
           </div>
         </CardHeader>
@@ -765,6 +848,112 @@ export function ClientDetail({ clientId }: { clientId: string }) {
                     )}
                 </div>
               ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Razorpay Payment Links */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Link2 className="h-4 w-4" />
+              Online Payment Links
+            </CardTitle>
+            <RoleGuard permission="recordPayments">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setRazorpayOpen(true)}
+                className="gap-1.5 text-primary border-primary/30 hover:bg-primary/5"
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                Create Payment Link
+              </Button>
+            </RoleGuard>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {!razorpayLinks || razorpayLinks.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-8 gap-2 text-center">
+              <Link2 className="h-7 w-7 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">No payment links created yet</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {razorpayLinks.map((link) => {
+                const isPaid = link.status === "paid";
+                const symbol = link.currency === "USD" ? "$" : link.currency === "EUR" ? "€" : link.currency === "GBP" ? "£" : "₹";
+                return (
+                  <div key={link.id} className="border border-border rounded-lg p-3">
+                    <div className="flex items-start justify-between gap-2 flex-wrap">
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-semibold text-sm">
+                            {symbol}{Number(link.amount).toLocaleString()}
+                          </span>
+                          <Badge
+                            variant={isPaid ? "success" : link.status === "cancelled" || link.status === "expired" ? "destructive" : "warning"}
+                            className="text-xs"
+                          >
+                            {isPaid ? "Paid" : link.status === "cancelled" ? "Cancelled" : link.status === "expired" ? "Expired" : "Pending"}
+                          </Badge>
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {link.description && <>{link.description} · </>}
+                          Created by {link.createdBy.name} · {formatDate(link.createdAt)}
+                          {isPaid && link.paidAt && <> · Paid {formatDate(link.paidAt)}</>}
+                        </p>
+                      </div>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {client.phone && !isPaid && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-7 w-7 text-[#25D366] hover:text-[#128C7E] hover:bg-green-50"
+                            title="Send via WhatsApp"
+                            onClick={() => shareViaWhatsApp(link)}
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Show QR code"
+                          onClick={() => setQrLink(link)}
+                        >
+                          <QrCode className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Copy link"
+                          onClick={() => copyPaymentLink(link)}
+                        >
+                          {copiedLinkId === link.id ? (
+                            <Check className="h-4 w-4 text-emerald-600" />
+                          ) : (
+                            <Copy className="h-4 w-4" />
+                          )}
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7"
+                          title="Open payment page"
+                          onClick={() => window.open(link.url, "_blank", "noopener,noreferrer")}
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           )}
         </CardContent>

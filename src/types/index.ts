@@ -218,6 +218,25 @@ export interface DevAccessPassword {
   client?: { id: string; name: string; company: string; clientCode?: string | null };
 }
 
+export interface RazorpayPaymentLink {
+  id: string;
+  clientId: string;
+  subscriptionId: string | null;
+  razorpayLinkId: string;
+  url: string;
+  shortUrl: string | null;
+  amount: number;
+  currency: string;
+  description: string | null;
+  status: string;
+  expiresAt: string | null;
+  paidAt: string | null;
+  createdById: string;
+  createdAt: string;
+  updatedAt: string;
+  createdBy: { id: string; name: string };
+}
+
 export interface AppCategoryMaster {
   id: string;
   key: string;
