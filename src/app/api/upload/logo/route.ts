@@ -13,6 +13,19 @@ export async function POST(request: NextRequest) {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
+    if (
+      !process.env.R2_ACCOUNT_ID ||
+      !process.env.R2_ACCESS_KEY_ID ||
+      !process.env.R2_SECRET_ACCESS_KEY ||
+      !process.env.R2_BUCKET_NAME ||
+      !process.env.R2_PUBLIC_URL
+    ) {
+      return NextResponse.json(
+        { error: "File storage is not configured. Please enter the logo URL manually." },
+        { status: 503 }
+      );
+    }
+
     const contentType = request.headers.get("content-type") ?? "";
     if (!contentType.includes("multipart/form-data")) {
       return NextResponse.json({ error: "Expected multipart/form-data" }, { status: 400 });

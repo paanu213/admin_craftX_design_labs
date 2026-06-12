@@ -34,31 +34,35 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
   providers: [
     Credentials({
       async authorize(credentials) {
-        const parsed = loginSchema.safeParse(credentials);
-        if (!parsed.success) return null;
+        try {
+          const parsed = loginSchema.safeParse(credentials);
+          if (!parsed.success) return null;
 
-        const { email, password } = parsed.data;
+          const { email, password } = parsed.data;
 
-        if (checkRateLimit(email)) return null;
+          if (checkRateLimit(email)) return null;
 
-        const user = await db.user.findFirst({
-          where: { email: { equals: email, mode: "insensitive" } },
-        });
-        if (!user || !user.isActive) return null;
+          const user = await db.user.findFirst({
+            where: { email: { equals: email, mode: "insensitive" } },
+          });
+          if (!user || !user.isActive) return null;
 
-        const passwordMatch = await bcrypt.compare(password, user.password);
-        if (!passwordMatch) return null;
+          const passwordMatch = await bcrypt.compare(password, user.password);
+          if (!passwordMatch) return null;
 
-        // Clear failed-attempt counter on successful login
-        loginAttempts.delete(email);
+          // Clear failed-attempt counter on successful login
+          loginAttempts.delete(email);
 
-        return {
-          id: user.id,
-          name: user.name,
-          email: user.email,
-          role: user.role,
-          image: user.avatar,
-        };
+          return {
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
+            image: user.avatar,
+          };
+        } catch {
+          return null;
+        }
       },
     }),
   ],
