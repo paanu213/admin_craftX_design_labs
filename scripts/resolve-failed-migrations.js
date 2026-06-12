@@ -1,5 +1,6 @@
 // Marks any failed migrations as rolled-back so prisma migrate deploy can proceed.
 // A migration is "failed" when started_at is set but finished_at is NULL.
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const { Pool } = require("pg");
 
 async function main() {

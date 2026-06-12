@@ -3,6 +3,7 @@ import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { applicationSchema } from "@/lib/validations/application.schema";
 import { canDo } from "@/lib/permissions";
+import type { AppStatus } from "@/generated/prisma/enums";
 
 export async function GET(request: NextRequest) {
   try {
@@ -18,8 +19,8 @@ export async function GET(request: NextRequest) {
 
     const where = {
       ...(search && { name: { contains: search, mode: "insensitive" as const } }),
-      ...(category && category !== "ALL" && { category: category as any }),
-      ...(status && status !== "ALL" && { status: status as any }),
+      ...(category && category !== "ALL" && { category }),
+      ...(status && status !== "ALL" && { status: status as AppStatus }),
     };
 
     const [apps, total] = await Promise.all([

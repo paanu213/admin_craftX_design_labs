@@ -301,7 +301,7 @@ export function ExpenseDetail({ expenseId }: { expenseId: string }) {
                     </p>
                     {approval.note && (
                       <p className="text-xs text-destructive mt-0.5 italic">
-                        "{approval.note}"
+                        &quot;{approval.note}&quot;
                       </p>
                     )}
                   </div>

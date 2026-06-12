@@ -76,6 +76,7 @@ export function GenerateKeyDialog({
   const trialExpiry = format(addDays(new Date(), 15), "MMM d, yyyy");
 
   // Pre-fill amount from subscription when opening
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
     setStep(1);
@@ -87,6 +88,7 @@ export function GenerateKeyDialog({
       setCurrency(sub.currency ?? "INR");
     }
   }, [open, sub]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function reset() {
     setStep(1);

@@ -74,6 +74,7 @@ export function RecordPaymentDialog({
 
   const sub = client.subscription;
 
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!open) return;
     setNote("");
@@ -87,6 +88,7 @@ export function RecordPaymentDialog({
       setAmount("");
     }
   }, [open, sub]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   function validateAmount(val: string): string {
     if (!val || val.trim() === "") return "Amount is required";
