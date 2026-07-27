@@ -11,33 +11,58 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Mail, Phone, Globe, User, Calendar, CreditCard } from "lucide-react";
+import { ArrowLeft, Mail, Phone, Globe, MapPin, Calendar, CreditCard, Users } from "lucide-react";
+
+interface AgencyUser {
+  id: string;
+  name: string;
+  email: string;
+  role: string;
+  isActive: boolean;
+  createdAt: string;
+}
+
+interface AgencySubscription {
+  id: string;
+  plan: string;
+  billingCycle: string;
+  status: string;
+  amount: number;
+  gstAmount?: number;
+  startDate: string;
+  endDate?: string;
+  couponRedemptions?: Array<{ discountAmount: number; coupon: { code: string } }>;
+}
 
 interface AgencyDetail {
   id: string;
   name: string;
   email: string;
+  slug?: string;
   phone?: string;
-  website?: string;
-  plan?: string;
-  status?: string;
-  agencyCode?: string;
-  createdAt?: string;
-  contactName?: string;
   address?: string;
-  city?: string;
+  website?: string;
   country?: string;
-  subscription?: {
-    planName: string;
-    price: number;
-    billingCycle: string;
-    startDate: string;
-    endDate?: string;
-    status: string;
-  };
-  contacts?: Array<{ id: string; name: string; email?: string; phone?: string; role?: string }>;
-  stats?: { openTickets: number; totalPayments: number };
+  currency?: string;
+  timezone?: string;
+  subscriptionPlan?: string;
+  subscriptionStatus?: string;
+  subscriptionExpiresAt?: string;
+  users?: AgencyUser[];
+  subscriptions?: AgencySubscription[];
+  customerCount?: number;
+  itineraryCount?: number;
+  tripCount?: number;
+  leadCount?: number;
 }
+
+const STATUS_COLORS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
+  ACTIVE: "default",
+  TRIAL: "secondary",
+  INACTIVE: "outline",
+  EXPIRED: "destructive",
+  CANCELLED: "destructive",
+};
 
 export default function AgencyDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -68,29 +93,28 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ id: str
 
         {isLoading ? (
           <div className="flex flex-col gap-4">
-            <Skeleton className="h-40" />
+            <Skeleton className="h-48" />
             <Skeleton className="h-32" />
           </div>
         ) : agency ? (
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 flex flex-col gap-6">
+
               {/* Basic info */}
               <Card>
                 <CardHeader>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <CardTitle className="text-xl">{agency.name}</CardTitle>
-                      {agency.agencyCode && (
-                        <p className="text-sm text-muted-foreground mt-1">{agency.agencyCode}</p>
-                      )}
+                      {agency.slug && <p className="text-sm text-muted-foreground mt-1">/{agency.slug}</p>}
                     </div>
-                    <div className="flex gap-2">
-                      {agency.plan && (
-                        <Badge variant="default">{agency.plan}</Badge>
+                    <div className="flex gap-2 flex-wrap">
+                      {agency.subscriptionPlan && (
+                        <Badge variant="outline">{agency.subscriptionPlan}</Badge>
                       )}
-                      {agency.status && (
-                        <Badge variant={agency.status === "ACTIVE" ? "default" : "secondary"}>
-                          {agency.status}
+                      {agency.subscriptionStatus && (
+                        <Badge variant={STATUS_COLORS[agency.subscriptionStatus] ?? "secondary"}>
+                          {agency.subscriptionStatus}
                         </Badge>
                       )}
                     </div>
@@ -113,88 +137,101 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ id: str
                     {agency.website && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Globe className="h-4 w-4 shrink-0" />
-                        <a href={agency.website} target="_blank" rel="noopener noreferrer" className="hover:text-foreground truncate">
-                          {agency.website}
-                        </a>
+                        <a href={agency.website} target="_blank" rel="noopener noreferrer" className="hover:text-foreground truncate">{agency.website}</a>
                       </div>
                     )}
-                    {agency.contactName && (
+                    {agency.country && (
                       <div className="flex items-center gap-2 text-muted-foreground">
-                        <User className="h-4 w-4 shrink-0" />
-                        <span>{agency.contactName}</span>
+                        <MapPin className="h-4 w-4 shrink-0" />
+                        <span>{agency.country}{agency.currency ? ` · ${agency.currency}` : ""}</span>
                       </div>
                     )}
-                    {agency.createdAt && (
+                    {agency.subscriptionExpiresAt && (
                       <div className="flex items-center gap-2 text-muted-foreground">
                         <Calendar className="h-4 w-4 shrink-0" />
-                        <span>Joined {new Date(agency.createdAt).toLocaleDateString()}</span>
+                        <span>Expires {new Date(agency.subscriptionExpiresAt).toLocaleDateString()}</span>
                       </div>
                     )}
                   </div>
-                  {(agency.address || agency.city || agency.country) && (
+                  {agency.address && (
                     <>
                       <Separator />
-                      <p className="text-sm text-muted-foreground">
-                        {[agency.address, agency.city, agency.country].filter(Boolean).join(", ")}
-                      </p>
+                      <p className="text-sm text-muted-foreground">{agency.address}</p>
                     </>
                   )}
                 </CardContent>
               </Card>
 
-              {/* Subscription */}
-              {agency.subscription && (
+              {/* Team members */}
+              {agency.users && agency.users.length > 0 && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-base flex items-center gap-2">
-                      <CreditCard className="h-4 w-4" />
-                      Subscription
+                      <Users className="h-4 w-4" />
+                      Team Members ({agency.users.length})
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="grid grid-cols-2 gap-3 text-sm">
-                    <div>
-                      <p className="text-muted-foreground text-xs">Plan</p>
-                      <p className="font-medium">{agency.subscription.planName}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Status</p>
-                      <Badge variant={agency.subscription.status === "ACTIVE" ? "default" : "secondary"} className="mt-0.5">
-                        {agency.subscription.status}
-                      </Badge>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Price</p>
-                      <p className="font-medium">₹{(agency.subscription.price / 100).toLocaleString("en-IN")} / {agency.subscription.billingCycle.toLowerCase()}</p>
-                    </div>
-                    <div>
-                      <p className="text-muted-foreground text-xs">Start Date</p>
-                      <p className="font-medium">{new Date(agency.subscription.startDate).toLocaleDateString()}</p>
-                    </div>
-                    {agency.subscription.endDate && (
-                      <div>
-                        <p className="text-muted-foreground text-xs">End Date</p>
-                        <p className="font-medium">{new Date(agency.subscription.endDate).toLocaleDateString()}</p>
+                  <CardContent className="flex flex-col gap-2">
+                    {agency.users.map((user) => (
+                      <div key={user.id} className="flex items-center justify-between gap-2 py-2 border-b last:border-0">
+                        <div>
+                          <p className="text-sm font-medium">{user.name}</p>
+                          <p className="text-xs text-muted-foreground">{user.email}</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Badge variant="outline" className="text-[10px]">{user.role}</Badge>
+                          {!user.isActive && <Badge variant="secondary" className="text-[10px]">Inactive</Badge>}
+                        </div>
                       </div>
-                    )}
+                    ))}
                   </CardContent>
                 </Card>
               )}
 
-              {/* Contacts */}
-              {agency.contacts && agency.contacts.length > 0 && (
+              {/* Subscription history */}
+              {agency.subscriptions && agency.subscriptions.length > 0 && (
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-base">Contacts</CardTitle>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <CreditCard className="h-4 w-4" />
+                      Subscription History
+                    </CardTitle>
                   </CardHeader>
                   <CardContent className="flex flex-col gap-3">
-                    {agency.contacts.map((contact) => (
-                      <div key={contact.id} className="flex items-start justify-between gap-2 py-2 border-b last:border-0">
+                    {agency.subscriptions.map((sub) => (
+                      <div key={sub.id} className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm py-2 border-b last:border-0">
                         <div>
-                          <p className="text-sm font-medium">{contact.name}</p>
-                          {contact.role && <p className="text-xs text-muted-foreground">{contact.role}</p>}
-                          {contact.email && <p className="text-xs text-muted-foreground">{contact.email}</p>}
-                          {contact.phone && <p className="text-xs text-muted-foreground">{contact.phone}</p>}
+                          <p className="text-xs text-muted-foreground">Plan</p>
+                          <p className="font-medium">{sub.plan} · {sub.billingCycle.toLowerCase()}</p>
                         </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Amount</p>
+                          <p className="font-medium">₹{(sub.amount / 100).toLocaleString("en-IN")}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Status</p>
+                          <Badge variant={STATUS_COLORS[sub.status] ?? "secondary"} className="text-[10px]">{sub.status}</Badge>
+                        </div>
+                        <div>
+                          <p className="text-xs text-muted-foreground">Start</p>
+                          <p>{new Date(sub.startDate).toLocaleDateString()}</p>
+                        </div>
+                        {sub.endDate && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">End</p>
+                            <p>{new Date(sub.endDate).toLocaleDateString()}</p>
+                          </div>
+                        )}
+                        {sub.couponRedemptions && sub.couponRedemptions.length > 0 && (
+                          <div>
+                            <p className="text-xs text-muted-foreground">Coupon</p>
+                            <p className="font-mono text-xs">{sub.couponRedemptions[0].coupon.code}
+                              <span className="text-muted-foreground ml-1">
+                                (−₹{(sub.couponRedemptions[0].discountAmount / 100).toLocaleString("en-IN")})
+                              </span>
+                            </p>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </CardContent>
@@ -203,24 +240,25 @@ export default function AgencyDetailPage({ params }: { params: Promise<{ id: str
             </div>
 
             {/* Stats sidebar */}
-            {agency.stats && (
-              <div className="flex flex-col gap-4">
-                <Card>
-                  <CardHeader><CardTitle className="text-sm">Stats</CardTitle></CardHeader>
-                  <CardContent className="flex flex-col gap-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Open Tickets</p>
-                      <p className="text-2xl font-bold">{agency.stats.openTickets}</p>
+            <div className="flex flex-col gap-4">
+              <Card>
+                <CardHeader><CardTitle className="text-sm">Entity Counts</CardTitle></CardHeader>
+                <CardContent className="flex flex-col gap-3">
+                  {[
+                    { label: "Customers", val: agency.customerCount },
+                    { label: "Trips", val: agency.tripCount },
+                    { label: "Itineraries", val: agency.itineraryCount },
+                    { label: "Leads", val: agency.leadCount },
+                  ].filter(r => r.val !== undefined).map(({ label, val }) => (
+                    <div key={label}>
+                      <p className="text-xs text-muted-foreground">{label}</p>
+                      <p className="text-2xl font-bold">{val}</p>
+                      <Separator className="mt-2" />
                     </div>
-                    <Separator />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Total Payments</p>
-                      <p className="text-2xl font-bold">₹{(agency.stats.totalPayments / 100).toLocaleString("en-IN")}</p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
+                  ))}
+                </CardContent>
+              </Card>
+            </div>
           </div>
         ) : null}
       </PageWrapper>

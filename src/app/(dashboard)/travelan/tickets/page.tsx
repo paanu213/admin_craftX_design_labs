@@ -23,14 +23,14 @@ import { Clock, MessageSquare } from "lucide-react";
 
 interface Ticket {
   id: string;
-  title: string;
+  subject: string;
   description?: string;
   status: "OPEN" | "IN_PROGRESS" | "RESOLVED" | "CLOSED";
   priority?: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
-  agencyName?: string;
+  agency?: { id: string; name: string; email: string };
   createdAt: string;
   updatedAt?: string;
-  repliesCount?: number;
+  responseCount?: number;
 }
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
@@ -151,9 +151,9 @@ export default function TravelanTicketsPage() {
               >
                 <CardContent className="p-4 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm truncate">{ticket.title}</p>
-                    {ticket.agencyName && (
-                      <p className="text-xs text-muted-foreground mt-0.5">{ticket.agencyName}</p>
+                    <p className="font-medium text-sm truncate">{ticket.subject}</p>
+                    {ticket.agency?.name && (
+                      <p className="text-xs text-muted-foreground mt-0.5">{ticket.agency.name}</p>
                     )}
                     {ticket.description && (
                       <p className="text-xs text-muted-foreground mt-1 line-clamp-2">{ticket.description}</p>
@@ -163,10 +163,10 @@ export default function TravelanTicketsPage() {
                       <span className="text-xs text-muted-foreground">
                         {new Date(ticket.createdAt).toLocaleDateString()}
                       </span>
-                      {ticket.repliesCount !== undefined && (
+                      {ticket.responseCount !== undefined && (
                         <>
                           <MessageSquare className="h-3 w-3 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">{ticket.repliesCount}</span>
+                          <span className="text-xs text-muted-foreground">{ticket.responseCount}</span>
                         </>
                       )}
                     </div>
