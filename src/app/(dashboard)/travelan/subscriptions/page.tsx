@@ -8,7 +8,15 @@ import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,7 +25,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search } from "lucide-react";
 
 interface Subscription {
   id: string;
@@ -32,16 +39,33 @@ interface Subscription {
   isAutoRenew?: boolean;
 }
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function threeMonthsAgo() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 3);
+  return d.toISOString().slice(0, 10);
+}
 
 export default function TravelanSubscriptionsPage() {
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [planFilter, setPlanFilter] = useState("ALL");
+  const [billingFilter, setBillingFilter] = useState("ALL");
+  const [from, setFrom] = useState(threeMonthsAgo());
+  const [to, setTo] = useState(today());
+  const [applied, setApplied] = useState({ from: threeMonthsAgo(), to: today() });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["travelan", "subscriptions", page, search],
+    queryKey: ["travelan", "subscriptions", page, statusFilter, planFilter, billingFilter, applied],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
-      if (search) params.set("search", search);
+      if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (planFilter !== "ALL") params.set("plan", planFilter);
+      if (billingFilter !== "ALL") params.set("billingCycle", billingFilter);
+      params.set("from", applied.from);
+      params.set("to", applied.to);
       return travelanFetch(`subscriptions?${params}`);
     },
     retry: 1,
@@ -59,14 +83,52 @@ export default function TravelanSubscriptionsPage() {
           description={`${total} subscriptions across all agencies`}
         />
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search agency…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+        {/* Filters */}
+        <div className="flex flex-wrap items-end gap-3 p-4 rounded-lg border bg-muted/30">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Status</Label>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="ACTIVE">Active</SelectItem>
+                <SelectItem value="EXPIRED">Expired</SelectItem>
+                <SelectItem value="CANCELLED">Cancelled</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Plan</Label>
+            <Select value={planFilter} onValueChange={(v) => { setPlanFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Plans</SelectItem>
+                <SelectItem value="FREE">Free</SelectItem>
+                <SelectItem value="PRO">Pro</SelectItem>
+                <SelectItem value="BUSINESS">Business</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Billing</Label>
+            <Select value={billingFilter} onValueChange={(v) => { setBillingFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Billing</SelectItem>
+                <SelectItem value="MONTHLY">Monthly</SelectItem>
+                <SelectItem value="YEARLY">Yearly</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="sub-from" className="text-xs">From</Label>
+            <Input id="sub-from" type="date" className="w-36" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="sub-to" className="text-xs">To</Label>
+            <Input id="sub-to" type="date" className="w-36" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <Button size="sm" onClick={() => { setApplied({ from, to }); setPage(1); }}>Apply</Button>
         </div>
 
         {error && (
@@ -116,14 +178,14 @@ export default function TravelanSubscriptionsPage() {
                     <TableCell className="text-sm">
                       ₹{(sub.price / 100).toLocaleString("en-IN")}
                     </TableCell>
-                    <TableCell className="text-sm capitalize">{sub.billingCycle.toLowerCase()}</TableCell>
+                    <TableCell className="text-sm capitalize">{sub.billingCycle?.toLowerCase()}</TableCell>
                     <TableCell>
                       <Badge variant={sub.status === "ACTIVE" ? "default" : "secondary"} className="text-xs">
                         {sub.status}
                       </Badge>
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
-                      {new Date(sub.startDate).toLocaleDateString()}
+                      {sub.startDate ? new Date(sub.startDate).toLocaleDateString() : "—"}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground">
                       {sub.endDate ? new Date(sub.endDate).toLocaleDateString() : "—"}

@@ -9,6 +9,7 @@ import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -18,7 +19,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Clock, MessageSquare } from "lucide-react";
+import { Clock, MessageSquare } from "lucide-react";
 
 interface Ticket {
   id: string;
@@ -31,7 +32,6 @@ interface Ticket {
   updatedAt?: string;
   repliesCount?: number;
 }
-
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   OPEN: "destructive",
@@ -47,18 +47,32 @@ const PRIORITY_VARIANTS: Record<string, "default" | "secondary" | "outline" | "d
   LOW: "outline",
 };
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function threeMonthsAgo() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 3);
+  return d.toISOString().slice(0, 10);
+}
+
 export default function TravelanTicketsPage() {
   const router = useRouter();
-  const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [priorityFilter, setPriorityFilter] = useState("ALL");
+  const [from, setFrom] = useState(threeMonthsAgo());
+  const [to, setTo] = useState(today());
+  const [applied, setApplied] = useState({ from: threeMonthsAgo(), to: today() });
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["travelan", "tickets", page, search, statusFilter],
+    queryKey: ["travelan", "tickets", page, statusFilter, priorityFilter, applied],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "12" });
-      if (search) params.set("search", search);
       if (statusFilter !== "ALL") params.set("status", statusFilter);
+      if (priorityFilter !== "ALL") params.set("priority", priorityFilter);
+      params.set("from", applied.from);
+      params.set("to", applied.to);
       return travelanFetch(`tickets?${params}`);
     },
     retry: 1,
@@ -73,28 +87,43 @@ export default function TravelanTicketsPage() {
       <PageWrapper>
         <PageHeader title="Support Tickets" description={`${total} tickets`} />
 
-        <div className="flex gap-3 flex-wrap">
-          <div className="relative flex-1 min-w-[200px] max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              className="pl-9"
-              placeholder="Search tickets…"
-              value={search}
-              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-            />
+        {/* Filters */}
+        <div className="flex flex-wrap items-end gap-3 p-4 rounded-lg border bg-muted/30">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Status</Label>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="OPEN">Open</SelectItem>
+                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                <SelectItem value="RESOLVED">Resolved</SelectItem>
+                <SelectItem value="CLOSED">Closed</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="OPEN">Open</SelectItem>
-              <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
-              <SelectItem value="RESOLVED">Resolved</SelectItem>
-              <SelectItem value="CLOSED">Closed</SelectItem>
-            </SelectContent>
-          </Select>
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Priority</Label>
+            <Select value={priorityFilter} onValueChange={(v) => { setPriorityFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-32"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Priority</SelectItem>
+                <SelectItem value="URGENT">Urgent</SelectItem>
+                <SelectItem value="HIGH">High</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LOW">Low</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tk-from" className="text-xs">From</Label>
+            <Input id="tk-from" type="date" className="w-36" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="tk-to" className="text-xs">To</Label>
+            <Input id="tk-to" type="date" className="w-36" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <Button size="sm" onClick={() => { setApplied({ from, to }); setPage(1); }}>Apply</Button>
         </div>
 
         {error && (
@@ -115,7 +144,11 @@ export default function TravelanTicketsPage() {
         ) : (
           <div className="flex flex-col gap-3">
             {tickets.map((ticket) => (
-              <Card key={ticket.id} className="hover:shadow-sm transition-shadow cursor-pointer" onClick={() => router.push(`/travelan/tickets/${ticket.id}`)}>
+              <Card
+                key={ticket.id}
+                className="hover:shadow-sm transition-shadow cursor-pointer"
+                onClick={() => router.push(`/travelan/tickets/${ticket.id}`)}
+              >
                 <CardContent className="p-4 flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <p className="font-medium text-sm truncate">{ticket.title}</p>

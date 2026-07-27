@@ -7,8 +7,14 @@ import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -17,7 +23,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Search, Tag } from "lucide-react";
+import { Tag } from "lucide-react";
 
 interface Coupon {
   id: string;
@@ -27,21 +33,21 @@ interface Coupon {
   minAmount?: number;
   maxUses?: number;
   usedCount?: number;
+  totalDiscountGiven?: number;
   isActive: boolean;
   expiresAt?: string;
   createdAt: string;
 }
 
-
 export default function TravelanCouponsPage() {
-  const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
+  const [activeFilter, setActiveFilter] = useState("ALL");
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["travelan", "coupons", page, search],
+    queryKey: ["travelan", "coupons", page, activeFilter],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
-      if (search) params.set("search", search);
+      if (activeFilter !== "ALL") params.set("isActive", activeFilter);
       return travelanFetch(`coupons?${params}`);
     },
     retry: 1,
@@ -56,14 +62,17 @@ export default function TravelanCouponsPage() {
       <PageWrapper>
         <PageHeader title="Coupons" description={`${total} discount codes`} />
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search coupon code…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+        <div className="flex gap-3">
+          <Select value={activeFilter} onValueChange={(v) => { setActiveFilter(v); setPage(1); }}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ALL">All Coupons</SelectItem>
+              <SelectItem value="true">Active Only</SelectItem>
+              <SelectItem value="false">Inactive Only</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {error && (
@@ -86,6 +95,7 @@ export default function TravelanCouponsPage() {
                   <TableHead>Discount</TableHead>
                   <TableHead>Min. Amount</TableHead>
                   <TableHead>Usage</TableHead>
+                  <TableHead>Total Saved</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Expires</TableHead>
                 </TableRow>
@@ -94,7 +104,7 @@ export default function TravelanCouponsPage() {
                 {isLoading ? (
                   Array.from({ length: 8 }).map((_, i) => (
                     <TableRow key={i}>
-                      {Array.from({ length: 6 }).map((__, j) => (
+                      {Array.from({ length: 7 }).map((__, j) => (
                         <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
                       ))}
                     </TableRow>
@@ -116,6 +126,11 @@ export default function TravelanCouponsPage() {
                       <TableCell className="text-sm text-muted-foreground">
                         {coupon.usedCount ?? 0}
                         {coupon.maxUses ? ` / ${coupon.maxUses}` : ""}
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {coupon.totalDiscountGiven !== undefined
+                          ? `₹${(coupon.totalDiscountGiven / 100).toLocaleString("en-IN")}`
+                          : "—"}
                       </TableCell>
                       <TableCell>
                         <Badge variant={coupon.isActive ? "default" : "secondary"} className="text-[10px]">
