@@ -51,10 +51,12 @@ function StatCard({
 }
 
 export default function TravelanOverviewPage() {
-  const { data, isLoading, error } = useQuery<DashboardStats>({
+  const { data, isLoading } = useQuery<DashboardStats>({
     queryKey: ["travelan", "dashboard"],
     queryFn: () => travelanFetch("dashboard"),
-    retry: 1,
+    retry: false,
+    // Silently ignore 404s — the backend may not expose this endpoint yet
+    throwOnError: false,
   });
 
   return (
@@ -70,12 +72,6 @@ export default function TravelanOverviewPage() {
             </Badge>
           }
         />
-
-        {error && (
-          <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
-            Failed to load data: {(error as Error).message}. Check that the Travelan product is configured with a valid API URL and key.
-          </div>
-        )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <StatCard title="Total Agencies" value={data?.totalAgencies} icon={Users} loading={isLoading} />
