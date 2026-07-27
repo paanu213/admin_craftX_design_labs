@@ -9,14 +9,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { Users, CreditCard, Ticket, TrendingUp } from "lucide-react";
 
-interface DashboardStats {
-  totalAgencies?: number;
-  activeSubscriptions?: number;
-  openTickets?: number;
-  monthlyRevenue?: number;
-  currency?: string;
-}
-
 function StatCard({
   title,
   value,
@@ -50,14 +42,35 @@ function StatCard({
   );
 }
 
+function pick(obj: Record<string, unknown>, ...keys: string[]): number | undefined {
+  for (const key of keys) {
+    const v = obj[key];
+    if (typeof v === "number") return v;
+    // handle nested: obj.agencies.total
+    if (v && typeof v === "object") {
+      const inner = v as Record<string, unknown>;
+      for (const subKey of ["total", "count", "active", "open"]) {
+        if (typeof inner[subKey] === "number") return inner[subKey] as number;
+      }
+    }
+  }
+  return undefined;
+}
+
 export default function TravelanOverviewPage() {
-  const { data, isLoading } = useQuery<DashboardStats>({
-    queryKey: ["travelan", "dashboard"],
+  const { data, isLoading } = useQuery({
+    queryKey: ["travelan", "overview"],
     queryFn: () => travelanFetch("overview"),
     retry: false,
-    // Silently ignore 404s — the backend may not expose this endpoint yet
     throwOnError: false,
   });
+
+  const stats = (data ?? {}) as Record<string, unknown>;
+
+  const totalAgencies = pick(stats, "totalAgencies", "agencyCount", "agencies");
+  const activeSubscriptions = pick(stats, "activeSubscriptions", "subscriptionCount", "subscriptions");
+  const openTickets = pick(stats, "openTickets", "ticketCount", "tickets");
+  const revenue = pick(stats, "revenue", "totalRevenue", "revenueTotal", "monthlyRevenue");
 
   return (
     <>
@@ -74,12 +87,12 @@ export default function TravelanOverviewPage() {
         />
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <StatCard title="Total Agencies" value={data?.totalAgencies} icon={Users} loading={isLoading} />
-          <StatCard title="Active Subscriptions" value={data?.activeSubscriptions} icon={CreditCard} loading={isLoading} />
-          <StatCard title="Open Tickets" value={data?.openTickets} icon={Ticket} loading={isLoading} />
+          <StatCard title="Total Agencies" value={totalAgencies} icon={Users} loading={isLoading} />
+          <StatCard title="Active Subscriptions" value={activeSubscriptions} icon={CreditCard} loading={isLoading} />
+          <StatCard title="Open Tickets" value={openTickets} icon={Ticket} loading={isLoading} />
           <StatCard
-            title="Monthly Revenue"
-            value={data?.monthlyRevenue !== undefined ? `₹${(data.monthlyRevenue / 100).toLocaleString("en-IN")}` : undefined}
+            title="Revenue"
+            value={revenue !== undefined ? `₹${(revenue / 100).toLocaleString("en-IN")}` : undefined}
             icon={TrendingUp}
             loading={isLoading}
           />

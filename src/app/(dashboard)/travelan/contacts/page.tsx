@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { travelanFetch } from "@/lib/travelan";
+import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Input } from "@/components/ui/input";
@@ -28,16 +28,12 @@ interface AgencyContact {
   isPrimary?: boolean;
 }
 
-interface ContactsResponse {
-  data: AgencyContact[];
-  meta?: { total: number; page: number; totalPages: number };
-}
 
 export default function TravelanContactsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = useQuery<ContactsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["travelan", "contacts", page, search],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "20" });
@@ -47,9 +43,8 @@ export default function TravelanContactsPage() {
     retry: 1,
   });
 
-  const contacts = data?.data ?? [];
-  const total = data?.meta?.total ?? 0;
-  const totalPages = data?.meta?.totalPages ?? 1;
+  const contacts = extractList<AgencyContact>(data);
+  const { total, totalPages } = extractPagination(data);
 
   return (
     <>

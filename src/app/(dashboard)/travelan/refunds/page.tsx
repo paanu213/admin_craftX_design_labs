@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { travelanFetch } from "@/lib/travelan";
+import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -36,10 +36,6 @@ interface Refund {
   createdAt: string;
 }
 
-interface RefundsResponse {
-  data: Refund[];
-  meta?: { total: number; page: number; totalPages: number; totalRefundAmount?: number };
-}
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   PENDING: "secondary",
@@ -52,7 +48,7 @@ export default function TravelanRefundsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
 
-  const { data, isLoading, error } = useQuery<RefundsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["travelan", "refunds", page, statusFilter],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
@@ -62,10 +58,10 @@ export default function TravelanRefundsPage() {
     retry: 1,
   });
 
-  const refunds = data?.data ?? [];
-  const total = data?.meta?.total ?? 0;
-  const totalPages = data?.meta?.totalPages ?? 1;
-  const totalAmount = data?.meta?.totalRefundAmount;
+  const refunds = extractList<Refund>(data);
+  const { total, totalPages } = extractPagination(data);
+  const rawData = data as Record<string, unknown> | undefined;
+  const totalAmount = typeof rawData?.totalRefundAmount === "number" ? rawData.totalRefundAmount : undefined;
 
   return (
     <>

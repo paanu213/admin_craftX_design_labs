@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { travelanFetch } from "@/lib/travelan";
+import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -32,10 +32,6 @@ interface Ticket {
   repliesCount?: number;
 }
 
-interface TicketsResponse {
-  data: Ticket[];
-  meta?: { total: number; page: number; totalPages: number };
-}
 
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   OPEN: "destructive",
@@ -57,7 +53,7 @@ export default function TravelanTicketsPage() {
   const [statusFilter, setStatusFilter] = useState("ALL");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = useQuery<TicketsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["travelan", "tickets", page, search, statusFilter],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "12" });
@@ -68,9 +64,8 @@ export default function TravelanTicketsPage() {
     retry: 1,
   });
 
-  const tickets = data?.data ?? [];
-  const totalPages = data?.meta?.totalPages ?? 1;
-  const total = data?.meta?.total ?? 0;
+  const tickets = extractList<Ticket>(data);
+  const { total, totalPages } = extractPagination(data);
 
   return (
     <>
