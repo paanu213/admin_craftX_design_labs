@@ -7,11 +7,12 @@ EXCEPTION WHEN duplicate_object THEN null; END $$;
 ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'EMPLOYEE';
 
 -- ─────────────────────────────────────────────
--- Grant FULL_PERMISSIONS to the Super Admin group
--- (ensures anyone in this group gets full access)
+-- Grant FULL_PERMISSIONS to the Super Admin group.
+-- __fullAccess sentinel ensures future module additions don't break full-admin detection.
 -- ─────────────────────────────────────────────
 UPDATE "user_groups"
 SET permissions = '{
+  "__fullAccess":   true,
   "clients":        {"read":true,"create":true,"update":true,"delete":true},
   "payments":       {"read":true,"create":true,"update":true,"delete":true},
   "expenses":       {"read":true,"create":true,"update":true,"delete":true},
@@ -21,35 +22,36 @@ SET permissions = '{
   "devAccess":      {"read":true,"create":true,"update":true,"delete":true},
   "masterData":     {"read":true,"create":true,"update":true,"delete":true},
   "users":          {"read":true,"create":true,"update":true,"delete":true},
-  "settings":       {"read":true,"create":true,"update":true,"delete":true}
+  "settings":       {"read":true,"create":true,"update":true,"delete":true},
+  "products":       {"read":true,"create":true,"update":true,"delete":true}
 }'::jsonb
 WHERE lower(name) = 'super admin';
 
 -- ─────────────────────────────────────────────
 -- Add admin@craftxlabs.com to Super Admin group
 -- ─────────────────────────────────────────────
-INSERT INTO "user_group_members" ("user_id", "group_id")
+INSERT INTO "user_group_members" ("userId", "groupId")
 SELECT u.id, ug.id
 FROM "users" u, "user_groups" ug
 WHERE lower(u.email) = 'admin@craftxlabs.com'
   AND lower(ug.name) = 'super admin'
   AND NOT EXISTS (
     SELECT 1 FROM "user_group_members" ugm
-    WHERE ugm.user_id = u.id AND ugm.group_id = ug.id
+    WHERE ugm."userId" = u.id AND ugm."groupId" = ug.id
   );
 
 -- ─────────────────────────────────────────────
 -- Add NagaPraveen to Super Admin group
 -- (handles both craftxdesignlans and craftxdesignlabs typos)
 -- ─────────────────────────────────────────────
-INSERT INTO "user_group_members" ("user_id", "group_id")
+INSERT INTO "user_group_members" ("userId", "groupId")
 SELECT u.id, ug.id
 FROM "users" u, "user_groups" ug
 WHERE lower(u.email) LIKE '%nagapraveen%'
   AND lower(ug.name) = 'super admin'
   AND NOT EXISTS (
     SELECT 1 FROM "user_group_members" ugm
-    WHERE ugm.user_id = u.id AND ugm.group_id = ug.id
+    WHERE ugm."userId" = u.id AND ugm."groupId" = ug.id
   );
 
 -- ─────────────────────────────────────────────

@@ -90,9 +90,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
             const effective = computeEffectivePermissions(
               groups.map(g => g.permissions as Partial<PermissionMatrix>)
             );
-            // If group permissions cover every module fully → grant FULL_PERMISSIONS
-            // so adding new modules to MODULES auto-grants them too
-            const isGroupFullAdmin = MODULES.every(m =>
+            // __fullAccess sentinel: set once by migration / "Grant Full Access" UI.
+            // Immune to new modules being added — no need to re-save permissions.
+            // Fallback: check all current MODULES for groups without the sentinel.
+            const hasFullAccessSentinel = groups.some(
+              g => (g.permissions as Record<string, unknown>)?.__fullAccess === true
+            );
+            const isGroupFullAdmin = hasFullAccessSentinel || MODULES.every(m =>
               effective[m.key]?.read && effective[m.key]?.create &&
               effective[m.key]?.update && effective[m.key]?.delete
             );

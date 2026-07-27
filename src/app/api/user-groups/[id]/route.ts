@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { auth } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { canDo } from "@/lib/permissions";
+import { canDo, MODULES } from "@/lib/permissions";
 
 const updateGroupSchema = z.object({
   name: z.string().min(1, "Name is required").max(100, "Name is too long").optional(),
@@ -54,13 +54,22 @@ export async function PATCH(
       }
     }
 
+    // Auto-stamp __fullAccess sentinel when all modules are all-true.
+    // This persists across future module additions without needing to re-save.
+    let permissionsToSave = result.data.permissions;
+    if (permissionsToSave !== undefined) {
+      const p = permissionsToSave as Record<string, { read?: boolean; create?: boolean; update?: boolean; delete?: boolean }>;
+      const allTrue = MODULES.every(m => p[m.key]?.read && p[m.key]?.create && p[m.key]?.update && p[m.key]?.delete);
+      if (allTrue) permissionsToSave = { ...permissionsToSave, __fullAccess: true };
+    }
+
     const updated = await db.userGroup.update({
       where: { id },
       data: {
         ...(result.data.name !== undefined && { name: result.data.name }),
         ...(result.data.description !== undefined && { description: result.data.description }),
         ...(result.data.isActive !== undefined && { isActive: result.data.isActive }),
-        ...(result.data.permissions !== undefined && { permissions: result.data.permissions as Parameters<typeof db.userGroup.update>[0]["data"]["permissions"] }),
+        ...(permissionsToSave !== undefined && { permissions: permissionsToSave as Parameters<typeof db.userGroup.update>[0]["data"]["permissions"] }),
       },
       include: {
         _count: { select: { members: true } },
