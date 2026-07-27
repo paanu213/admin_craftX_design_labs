@@ -3,6 +3,7 @@ name: Database Migrations
 on:
   push:
     branches: [main, master]
+  workflow_dispatch:
 
 concurrency:
   group: migrate-${{ github.ref }}
