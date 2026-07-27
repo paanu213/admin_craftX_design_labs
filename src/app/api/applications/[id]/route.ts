@@ -34,7 +34,7 @@ export async function GET(
       ...app,
       monthlyPrice: app.monthlyPrice ? Number(app.monthlyPrice) : null,
       yearlyPrice: app.yearlyPrice ? Number(app.yearlyPrice) : null,
-      subscriptions: app.subscriptions.map((s) => ({ ...s, price: Number(s.price) })),
+      subscriptions: app.subscriptions.map((s: { price: unknown; [k: string]: unknown }) => ({ ...s, price: Number(s.price) })),
     });
   } catch (error) {
     console.error("[GET /api/applications/[id]]", error);

@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
           cancelledBy: { select: { id: true, name: true, role: true } },
         },
       });
-      return NextResponse.json(payments.map((p) => ({ ...p, amount: Number(p.amount) })));
+      return NextResponse.json(payments.map((p: { amount: unknown; [k: string]: unknown }) => ({ ...p, amount: Number(p.amount) })));
     }
 
     const [payments, total] = await Promise.all([
@@ -61,7 +61,7 @@ export async function GET(request: NextRequest) {
     ]);
 
     return NextResponse.json({
-      data: payments.map((p) => ({ ...p, amount: Number(p.amount) })),
+      data: payments.map((p: { amount: unknown; [k: string]: unknown }) => ({ ...p, amount: Number(p.amount) })),
       meta: { page, limit, total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {

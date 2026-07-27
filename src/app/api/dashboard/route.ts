@@ -113,7 +113,7 @@ export async function GET() {
     ]);
 
     const spenderIds = topSpendersGroupBy.map((s: { createdById: string }) => s.createdById);
-    const spenderUsers =
+    const spenderUsers: Array<{ id: string; name: string; role: string }> =
       spenderIds.length > 0
         ? await db.user.findMany({
             where: { id: { in: spenderIds } },

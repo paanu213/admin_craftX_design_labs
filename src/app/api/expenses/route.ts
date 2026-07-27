@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       db.expense.count({ where }),
     ]);
 
-    const data = expenses.map((expense) => ({
+    const data = expenses.map((expense: { amount: unknown; [k: string]: unknown }) => ({
       ...expense,
       amount: Number(expense.amount),
     }));
@@ -115,7 +115,7 @@ export async function POST(request: NextRequest) {
       },
       select: { userId: true },
     });
-    const potentialApprovers = approverMembers.map(m => ({ id: m.userId }));
+    const potentialApprovers: Array<{ id: string }> = approverMembers.map((m: { userId: string }) => ({ id: m.userId }));
 
     const expense = await db.expense.create({
       data: {

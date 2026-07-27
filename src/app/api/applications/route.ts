@@ -37,7 +37,7 @@ export async function GET(request: NextRequest) {
       db.application.count({ where }),
     ]);
 
-    const activeCountsRaw = await db.subscription.groupBy({
+    const activeCountsRaw: Array<{ applicationId: string | null; _count: { id: number } }> = await db.subscription.groupBy({
       by: ["applicationId"],
       where: { applicationId: { not: null } },
       _count: { id: true },
@@ -48,7 +48,7 @@ export async function GET(request: NextRequest) {
         .map((r) => [r.applicationId!, r._count.id])
     );
 
-    const data = apps.map((app) => ({
+    const data = apps.map((app: { id: string; monthlyPrice: unknown; yearlyPrice: unknown; [k: string]: unknown }) => ({
       ...app,
       monthlyPrice: app.monthlyPrice ? Number(app.monthlyPrice) : null,
       yearlyPrice: app.yearlyPrice ? Number(app.yearlyPrice) : null,

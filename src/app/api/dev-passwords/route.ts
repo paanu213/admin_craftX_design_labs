@@ -50,7 +50,7 @@ export async function GET(request: NextRequest) {
 
     const now = new Date();
     return NextResponse.json(
-      passwords.map((p) => ({
+      passwords.map((p: { usedAt: unknown; expiresAt: Date; password: unknown; [k: string]: unknown }) => ({
         ...p,
         // Only expose plaintext while the password is still active
         password: !p.usedAt && new Date(p.expiresAt) > now ? p.password : null,
