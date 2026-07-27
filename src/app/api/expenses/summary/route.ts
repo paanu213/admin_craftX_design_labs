@@ -14,11 +14,7 @@ export async function GET() {
     const isAdmin = canDo(matrix, 'expenses', 'update');
     const ownFilter = isAdmin ? {} : { createdById: session.user.id };
 
-    const [allGrouped, approvedGrouped, pendingGrouped]: [
-      Array<{ createdById: string; _sum: { amount: unknown }; _count: { id: number } }>,
-      Array<{ createdById: string; _sum: { amount: unknown } }>,
-      Array<{ createdById: string; _count: { id: number } }>,
-    ] = await Promise.all([
+    const [allGrouped, approvedGrouped, pendingGrouped] = await Promise.all([
       db.expense.groupBy({
         by: ["createdById"],
         where: ownFilter,
@@ -36,16 +32,21 @@ export async function GET() {
         where: { status: "PENDING", ...ownFilter },
         _count: { id: true },
       }),
-    ]);
+    ]) as [
+      Array<{ createdById: string; _sum: { amount: unknown }; _count: { id: number } }>,
+      Array<{ createdById: string; _sum: { amount: unknown } }>,
+      Array<{ createdById: string; _count: { id: number } }>,
+    ];
 
     const userIds = allGrouped.map((g) => g.createdById);
-    const users: Array<{ id: string; name: string; role: string }> =
+    const users = (
       userIds.length > 0
         ? await db.user.findMany({
             where: { id: { in: userIds } },
             select: { id: true, name: true, role: true },
           })
-        : [];
+        : []
+    ) as Array<{ id: string; name: string; role: string }>;
 
     const summary = allGrouped.map((g) => {
       const user = users.find((u) => u.id === g.createdById);

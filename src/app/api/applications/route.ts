@@ -37,11 +37,11 @@ export async function GET(request: NextRequest) {
       db.application.count({ where }),
     ]);
 
-    const activeCountsRaw: Array<{ applicationId: string | null; _count: { id: number } }> = await db.subscription.groupBy({
+    const activeCountsRaw = await db.subscription.groupBy({
       by: ["applicationId"],
       where: { applicationId: { not: null } },
       _count: { id: true },
-    });
+    }) as Array<{ applicationId: string | null; _count: { id: number } }>;
     const activeMap = Object.fromEntries(
       activeCountsRaw
         .filter((r) => r.applicationId)
