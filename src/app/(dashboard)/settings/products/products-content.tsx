@@ -272,6 +272,7 @@ export function ProductsContent() {
                   <div className="flex items-center gap-3 min-w-0">
                     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-muted border">
                       {product.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img src={product.logoUrl} alt={product.name} className="h-7 w-7 rounded object-contain" />
                       ) : (
                         <Package className="h-5 w-5 text-muted-foreground" />

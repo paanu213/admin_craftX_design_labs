@@ -92,6 +92,7 @@ export function ProductSwitcher() {
                   >
                     <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-muted border">
                       {product.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
                         <img
                           src={product.logoUrl}
                           alt={product.name}

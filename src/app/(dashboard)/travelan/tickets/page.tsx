@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
-import { Search, Eye, Clock, MessageSquare } from "lucide-react";
+import { Search, Clock, MessageSquare } from "lucide-react";
 
 interface Ticket {
   id: string;
