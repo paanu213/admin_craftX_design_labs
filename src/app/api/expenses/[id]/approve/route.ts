@@ -77,7 +77,7 @@ export async function POST(
     }
 
     // Re-fetch all approvals for this expense
-    const allApprovals = await db.expenseApproval.findMany({ where: { expenseId: id } });
+    const allApprovals: Array<{ status: string; note: string | null; approverId: string }> = await db.expenseApproval.findMany({ where: { expenseId: id } });
 
     let newExpenseStatus: "PENDING" | "APPROVED" | "REJECTED" = "PENDING";
 

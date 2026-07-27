@@ -241,6 +241,22 @@ export interface RazorpayPaymentLink {
   createdBy: { id: string; name: string };
 }
 
+export interface Product {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  launchDate: string | null;
+  apiUrl: string | null;
+  apiKey: string | null;
+  isActive: boolean;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface AppCategoryMaster {
   id: string;
   key: string;

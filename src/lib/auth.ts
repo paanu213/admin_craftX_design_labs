@@ -77,7 +77,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // This means group permission changes take effect immediately without re-login.
       if (token.id) {
         try {
-          const groups = await db.userGroup.findMany({
+          const groups: Array<{ id: string; name: string; permissions: unknown }> = await db.userGroup.findMany({
             where: {
               members: { some: { userId: token.id as string } },
               isActive: true,
