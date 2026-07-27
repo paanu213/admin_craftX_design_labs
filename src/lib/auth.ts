@@ -98,7 +98,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
               g => (g.permissions as Record<string, unknown>)?.__fullAccess === true
             );
             const isSuperAdminGroup = groups.some(
-              g => g.name.toLowerCase() === "super admin"
+              g => g.name.toLowerCase().startsWith("super admin")
             );
             const isGroupFullAdmin = hasFullAccessSentinel || isSuperAdminGroup || MODULES.every(m =>
               effective[m.key]?.read && effective[m.key]?.create &&
