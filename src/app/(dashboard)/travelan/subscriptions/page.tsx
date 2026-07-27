@@ -28,15 +28,15 @@ import {
 
 interface Subscription {
   id: string;
-  agencyName?: string;
-  agencyEmail?: string;
-  planName: string;
-  price: number;
+  agency?: { id: string; name: string; email: string; country?: string };
+  plan: string;
+  amount: number;
+  gstAmount?: number;
   billingCycle: string;
   status: string;
   startDate: string;
   endDate?: string;
-  isAutoRenew?: boolean;
+  couponRedemptions?: Array<{ discountAmount: number; coupon: { code: string } }>;
 }
 
 function today() {
@@ -169,14 +169,14 @@ export default function TravelanSubscriptionsPage() {
                 subscriptions.map((sub) => (
                   <TableRow key={sub.id}>
                     <TableCell>
-                      <p className="font-medium text-sm">{sub.agencyName ?? "—"}</p>
-                      {sub.agencyEmail && <p className="text-xs text-muted-foreground">{sub.agencyEmail}</p>}
+                      <p className="font-medium text-sm">{sub.agency?.name ?? "—"}</p>
+                      {sub.agency?.email && <p className="text-xs text-muted-foreground">{sub.agency.email}</p>}
                     </TableCell>
                     <TableCell>
-                      <Badge variant="outline">{sub.planName}</Badge>
+                      <Badge variant="outline">{sub.plan}</Badge>
                     </TableCell>
                     <TableCell className="text-sm">
-                      ₹{(sub.price / 100).toLocaleString("en-IN")}
+                      ₹{(sub.amount / 100).toLocaleString("en-IN")}
                     </TableCell>
                     <TableCell className="text-sm capitalize">{sub.billingCycle?.toLowerCase()}</TableCell>
                     <TableCell>

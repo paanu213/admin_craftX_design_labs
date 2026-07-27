@@ -28,14 +28,14 @@ import { Tag } from "lucide-react";
 interface Coupon {
   id: string;
   code: string;
-  discount: number;
-  discountType: "PERCENT" | "FIXED";
+  discountValue: number;
+  discountType: "PERCENTAGE" | "FLAT";
   minAmount?: number;
-  maxUses?: number;
-  usedCount?: number;
-  totalDiscountGiven?: number;
+  maxTotalUses?: number;
+  currentUses?: number;
+  totalDiscountGivenPaise?: number;
   isActive: boolean;
-  expiresAt?: string;
+  validUntil?: string;
   createdAt: string;
 }
 
@@ -116,20 +116,20 @@ export default function TravelanCouponsPage() {
                         <code className="text-sm font-mono bg-muted px-1.5 py-0.5 rounded">{coupon.code}</code>
                       </TableCell>
                       <TableCell className="text-sm font-medium">
-                        {coupon.discountType === "PERCENT"
-                          ? `${coupon.discount}%`
-                          : `₹${(coupon.discount / 100).toLocaleString("en-IN")}`}
+                        {coupon.discountType === "PERCENTAGE"
+                          ? `${coupon.discountValue}%`
+                          : `₹${(coupon.discountValue / 100).toLocaleString("en-IN")}`}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {coupon.minAmount ? `₹${(coupon.minAmount / 100).toLocaleString("en-IN")}` : "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {coupon.usedCount ?? 0}
-                        {coupon.maxUses ? ` / ${coupon.maxUses}` : ""}
+                        {coupon.currentUses ?? 0}
+                        {coupon.maxTotalUses ? ` / ${coupon.maxTotalUses}` : ""}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {coupon.totalDiscountGiven !== undefined
-                          ? `₹${(coupon.totalDiscountGiven / 100).toLocaleString("en-IN")}`
+                        {coupon.totalDiscountGivenPaise !== undefined
+                          ? `₹${(coupon.totalDiscountGivenPaise / 100).toLocaleString("en-IN")}`
                           : "—"}
                       </TableCell>
                       <TableCell>
@@ -138,7 +138,7 @@ export default function TravelanCouponsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : "Never"}
+                        {coupon.validUntil ? new Date(coupon.validUntil).toLocaleDateString() : "Never"}
                       </TableCell>
                     </TableRow>
                   ))

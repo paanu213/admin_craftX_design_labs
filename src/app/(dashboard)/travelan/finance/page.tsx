@@ -13,12 +13,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { TrendingUp, TrendingDown, IndianRupee, ReceiptText, Wallet } from "lucide-react";
 
 interface FinanceSummary {
-  revenue?: number;
-  gst?: number;
-  refunds?: number;
-  expenses?: number;
-  profit?: number;
+  period?: { from: string; to: string };
   currency?: string;
+  allAmountsInPaise?: boolean;
+  revenue?: { gross?: number; gst?: number; afterGst?: number; transactionCount?: number };
+  refunds?: { total?: number; count?: number };
+  netRevenue?: number;
+  expenses?: { total?: number; count?: number; byCategory?: Record<string, number> };
+  profit?: number;
 }
 
 function today() {
@@ -44,10 +46,10 @@ export default function TravelanFinancePage() {
   });
 
   const metrics = [
-    { label: "Revenue", value: data?.revenue, icon: IndianRupee, positive: true },
-    { label: "GST Collected", value: data?.gst, icon: ReceiptText, positive: true },
-    { label: "Refunds", value: data?.refunds, icon: TrendingDown, positive: false },
-    { label: "Expenses", value: data?.expenses, icon: Wallet, positive: false },
+    { label: "Gross Revenue", value: data?.revenue?.gross, icon: IndianRupee, positive: true },
+    { label: "GST Collected", value: data?.revenue?.gst, icon: ReceiptText, positive: true },
+    { label: "Refunds", value: data?.refunds?.total, icon: TrendingDown, positive: false },
+    { label: "Expenses", value: data?.expenses?.total, icon: Wallet, positive: false },
     { label: "Net Profit", value: data?.profit, icon: TrendingUp, positive: true },
   ];
 

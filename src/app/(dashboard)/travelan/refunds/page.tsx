@@ -29,21 +29,18 @@ import { RefreshCcw } from "lucide-react";
 
 interface Refund {
   id: string;
-  agencyName?: string;
+  agency?: { id: string; name: string; email: string };
   amount: number;
   reason?: string;
   status: string;
-  originalPaymentDate?: string;
-  refundedAt?: string;
+  gatewayRefundId?: string;
   createdAt: string;
 }
 
-
 const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "destructive"> = {
   PENDING: "secondary",
-  APPROVED: "default",
-  PROCESSED: "default",
-  REJECTED: "destructive",
+  COMPLETED: "default",
+  FAILED: "destructive",
 };
 
 function today() { return new Date().toISOString().slice(0, 10); }
@@ -92,9 +89,8 @@ export default function TravelanRefundsPage() {
               <SelectContent>
                 <SelectItem value="ALL">All Status</SelectItem>
                 <SelectItem value="PENDING">Pending</SelectItem>
-                <SelectItem value="APPROVED">Approved</SelectItem>
-                <SelectItem value="PROCESSED">Processed</SelectItem>
-                <SelectItem value="REJECTED">Rejected</SelectItem>
+                <SelectItem value="COMPLETED">Completed</SelectItem>
+                <SelectItem value="FAILED">Failed</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -129,8 +125,8 @@ export default function TravelanRefundsPage() {
                   <TableHead>Amount</TableHead>
                   <TableHead>Reason</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead>Gateway Ref</TableHead>
                   <TableHead>Requested</TableHead>
-                  <TableHead>Refunded</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -145,7 +141,7 @@ export default function TravelanRefundsPage() {
                 ) : (
                   refunds.map((refund) => (
                     <TableRow key={refund.id}>
-                      <TableCell className="text-sm font-medium">{refund.agencyName ?? "—"}</TableCell>
+                      <TableCell className="text-sm font-medium">{refund.agency?.name ?? "—"}</TableCell>
                       <TableCell className="text-sm font-medium">
                         ₹{(refund.amount / 100).toLocaleString("en-IN")}
                       </TableCell>
@@ -157,11 +153,11 @@ export default function TravelanRefundsPage() {
                           {refund.status}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-sm text-muted-foreground">
-                        {new Date(refund.createdAt).toLocaleDateString()}
+                      <TableCell className="text-sm text-muted-foreground font-mono text-xs">
+                        {refund.gatewayRefundId ?? "—"}
                       </TableCell>
                       <TableCell className="text-sm text-muted-foreground">
-                        {refund.refundedAt ? new Date(refund.refundedAt).toLocaleDateString() : "—"}
+                        {new Date(refund.createdAt).toLocaleDateString()}
                       </TableCell>
                     </TableRow>
                   ))
