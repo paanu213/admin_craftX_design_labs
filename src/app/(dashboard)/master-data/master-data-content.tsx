@@ -39,7 +39,11 @@ export function MasterDataContent() {
 
   const { data: categories, isLoading } = useQuery<AppCategoryMaster[]>({
     queryKey: ["app-categories"],
-    queryFn: () => fetch("/api/master-data/categories").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/master-data/categories");
+      if (!r.ok) throw new Error(`Failed to fetch categories: ${r.status}`);
+      return r.json();
+    },
   });
 
   async function handleAdd(e: React.FormEvent) {
