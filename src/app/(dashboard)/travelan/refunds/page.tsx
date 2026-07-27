@@ -3,6 +3,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -44,15 +46,25 @@ const STATUS_VARIANTS: Record<string, "default" | "secondary" | "outline" | "des
   REJECTED: "destructive",
 };
 
+function today() { return new Date().toISOString().slice(0, 10); }
+function threeMonthsAgo() {
+  const d = new Date(); d.setMonth(d.getMonth() - 3); return d.toISOString().slice(0, 10);
+}
+
 export default function TravelanRefundsPage() {
   const [page, setPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("ALL");
+  const [from, setFrom] = useState(threeMonthsAgo());
+  const [to, setTo] = useState(today());
+  const [applied, setApplied] = useState({ from: threeMonthsAgo(), to: today() });
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["travelan", "refunds", page, statusFilter],
+    queryKey: ["travelan", "refunds", page, statusFilter, applied],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
       if (statusFilter !== "ALL") params.set("status", statusFilter);
+      params.set("from", applied.from);
+      params.set("to", applied.to);
       return travelanFetch(`refunds?${params}`);
     },
     retry: 1,
@@ -72,19 +84,29 @@ export default function TravelanRefundsPage() {
           description={`${total} refund requests${totalAmount !== undefined ? ` · Total: ₹${(totalAmount / 100).toLocaleString("en-IN")}` : ""}`}
         />
 
-        <div className="flex gap-3">
-          <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
-            <SelectTrigger className="w-40">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="ALL">All Status</SelectItem>
-              <SelectItem value="PENDING">Pending</SelectItem>
-              <SelectItem value="APPROVED">Approved</SelectItem>
-              <SelectItem value="PROCESSED">Processed</SelectItem>
-              <SelectItem value="REJECTED">Rejected</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex flex-wrap items-end gap-3 p-4 rounded-lg border bg-muted/30">
+          <div className="flex flex-col gap-1.5">
+            <Label className="text-xs">Status</Label>
+            <Select value={statusFilter} onValueChange={(v) => { setStatusFilter(v); setPage(1); }}>
+              <SelectTrigger className="w-36"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="ALL">All Status</SelectItem>
+                <SelectItem value="PENDING">Pending</SelectItem>
+                <SelectItem value="APPROVED">Approved</SelectItem>
+                <SelectItem value="PROCESSED">Processed</SelectItem>
+                <SelectItem value="REJECTED">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rf-from" className="text-xs">From</Label>
+            <Input id="rf-from" type="date" className="w-36" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="rf-to" className="text-xs">To</Label>
+            <Input id="rf-to" type="date" className="w-36" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <Button size="sm" onClick={() => { setApplied({ from, to }); setPage(1); }}>Apply</Button>
         </div>
 
         {error && (

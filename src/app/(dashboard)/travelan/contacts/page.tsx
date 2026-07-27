@@ -5,61 +5,70 @@ import { useQuery } from "@tanstack/react-query";
 import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
-import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Search, Mail, Phone } from "lucide-react";
+import { Card, CardContent } from "@/components/ui/card";
+import { Mail, Phone, Clock, MessageSquare } from "lucide-react";
 
-interface AgencyContact {
+interface ContactMessage {
   id: string;
   name: string;
   email?: string;
   phone?: string;
-  role?: string;
+  message?: string;
+  subject?: string;
   agencyName?: string;
-  isPrimary?: boolean;
+  createdAt: string;
 }
 
+function today() {
+  return new Date().toISOString().slice(0, 10);
+}
+function threeMonthsAgo() {
+  const d = new Date();
+  d.setMonth(d.getMonth() - 3);
+  return d.toISOString().slice(0, 10);
+}
 
 export default function TravelanContactsPage() {
-  const [search, setSearch] = useState("");
+  const [from, setFrom] = useState(threeMonthsAgo());
+  const [to, setTo] = useState(today());
+  const [applied, setApplied] = useState({ from: threeMonthsAgo(), to: today() });
   const [page, setPage] = useState(1);
 
   const { data, isLoading, error } = useQuery({
-    queryKey: ["travelan", "contacts", page, search],
+    queryKey: ["travelan", "contacts", page, applied],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "20" });
-      if (search) params.set("search", search);
+      params.set("from", applied.from);
+      params.set("to", applied.to);
       return travelanFetch(`contacts?${params}`);
     },
     retry: 1,
   });
 
-  const contacts = extractList<AgencyContact>(data);
+  const contacts = extractList<ContactMessage>(data);
   const { total, totalPages } = extractPagination(data);
 
   return (
     <>
       <Header title="Contacts" />
       <PageWrapper>
-        <PageHeader title="Contacts" description={`${total} contacts across all agencies`} />
+        <PageHeader title="Contact Messages" description={`${total} contact form submissions`} />
 
-        <div className="relative max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            className="pl-9"
-            placeholder="Search contacts…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(1); }}
-          />
+        {/* Date range filter */}
+        <div className="flex flex-wrap items-end gap-3 p-4 rounded-lg border bg-muted/30">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="ct-from" className="text-xs">From</Label>
+            <Input id="ct-from" type="date" className="w-36" value={from} max={to} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="ct-to" className="text-xs">To</Label>
+            <Input id="ct-to" type="date" className="w-36" value={to} min={from} max={today()} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <Button size="sm" onClick={() => { setApplied({ from, to }); setPage(1); }}>Apply</Button>
         </div>
 
         {error && (
@@ -68,63 +77,57 @@ export default function TravelanContactsPage() {
           </div>
         )}
 
-        <div className="rounded-lg border overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Name</TableHead>
-                <TableHead>Agency</TableHead>
-                <TableHead>Role</TableHead>
-                <TableHead>Email</TableHead>
-                <TableHead>Phone</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {isLoading ? (
-                Array.from({ length: 8 }).map((_, i) => (
-                  <TableRow key={i}>
-                    {Array.from({ length: 5 }).map((__, j) => (
-                      <TableCell key={j}><Skeleton className="h-4 w-full" /></TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : contacts.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
-                    No contacts found
-                  </TableCell>
-                </TableRow>
-              ) : (
-                contacts.map((contact) => (
-                  <TableRow key={contact.id}>
-                    <TableCell>
-                      <p className="text-sm font-medium">{contact.name}</p>
-                      {contact.isPrimary && <span className="text-[10px] text-primary">Primary</span>}
-                    </TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{contact.agencyName ?? "—"}</TableCell>
-                    <TableCell className="text-sm text-muted-foreground">{contact.role ?? "—"}</TableCell>
-                    <TableCell>
-                      {contact.email ? (
-                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-                          <Mail className="h-3.5 w-3.5" />
-                          {contact.email}
-                        </a>
-                      ) : "—"}
-                    </TableCell>
-                    <TableCell>
-                      {contact.phone ? (
-                        <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                          <Phone className="h-3.5 w-3.5" />
-                          {contact.phone}
-                        </div>
-                      ) : "—"}
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+        {isLoading ? (
+          <div className="flex flex-col gap-3">
+            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-28 rounded-lg" />)}
+          </div>
+        ) : contacts.length === 0 ? (
+          <div className="flex flex-col items-center gap-3 py-16 text-center">
+            <MessageSquare className="h-10 w-10 text-muted-foreground" />
+            <p className="text-muted-foreground">No contact messages in this period</p>
+          </div>
+        ) : (
+          <div className="flex flex-col gap-3">
+            {contacts.map((contact) => (
+              <Card key={contact.id}>
+                <CardContent className="p-4 flex flex-col gap-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div>
+                      <p className="font-medium text-sm">{contact.name}</p>
+                      {contact.agencyName && (
+                        <p className="text-xs text-muted-foreground">{contact.agencyName}</p>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                      <Clock className="h-3 w-3" />
+                      {new Date(contact.createdAt).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {(contact.subject) && (
+                    <p className="text-sm font-medium">{contact.subject}</p>
+                  )}
+                  {contact.message && (
+                    <p className="text-sm text-muted-foreground line-clamp-3">{contact.message}</p>
+                  )}
+                  <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+                    {contact.email && (
+                      <a href={`mailto:${contact.email}`} className="flex items-center gap-1 hover:text-foreground">
+                        <Mail className="h-3 w-3" />
+                        {contact.email}
+                      </a>
+                    )}
+                    {contact.phone && (
+                      <span className="flex items-center gap-1">
+                        <Phone className="h-3 w-3" />
+                        {contact.phone}
+                      </span>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        )}
 
         {totalPages > 1 && (
           <div className="flex items-center justify-between">
