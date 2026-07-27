@@ -53,7 +53,7 @@ function StatCard({
 export default function TravelanOverviewPage() {
   const { data, isLoading } = useQuery<DashboardStats>({
     queryKey: ["travelan", "dashboard"],
-    queryFn: () => travelanFetch("dashboard"),
+    queryFn: () => travelanFetch("overview"),
     retry: false,
     // Silently ignore 404s — the backend may not expose this endpoint yet
     throwOnError: false,
