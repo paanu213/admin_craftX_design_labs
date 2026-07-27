@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "prisma migrate deploy && prisma generate && next build",
     "migrate:resolve-failed": "node scripts/resolve-failed-migrations.js",
     "migrate:deploy": "npm run migrate:resolve-failed && prisma migrate deploy",
     "start": "next start",
