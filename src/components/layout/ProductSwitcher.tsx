@@ -28,7 +28,11 @@ export function ProductSwitcher() {
 
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ["products-switcher"],
-    queryFn: () => fetch("/api/products").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/products");
+      if (!r.ok) throw new Error(`Failed to fetch products: ${r.status}`);
+      return r.json() as Promise<Product[]>;
+    },
     staleTime: 60_000,
   });
 

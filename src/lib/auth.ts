@@ -8,6 +8,7 @@ import {
   computeEffectivePermissions,
   getPermissionsFromRole,
   FULL_PERMISSIONS,
+  EMPTY_PERMISSIONS,
   MODULES,
   type PermissionMatrix,
 } from "@/lib/permissions";
@@ -116,6 +117,13 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
       // Fallback for sessions predating the permissionMatrix field
       if (!token.permissionMatrix && token.role) {
         token.permissionMatrix = getPermissionsFromRole(token.role as string);
+      }
+
+      // Unconditional safety net — permissionMatrix must never be undefined when
+      // the token is serialised. An undefined value causes canDo() to throw TypeError
+      // in every API route, returning 500 for all authenticated requests.
+      if (!token.permissionMatrix) {
+        token.permissionMatrix = EMPTY_PERMISSIONS;
       }
 
       return token;

@@ -82,15 +82,16 @@ export function computeEffectivePermissions(
 }
 
 // Check a single old-style permission key against a computed PermissionMatrix
-export function can(matrix: PermissionMatrix, permission: Permission): boolean {
+export function can(matrix: PermissionMatrix | null | undefined, permission: Permission): boolean {
+  if (!matrix) return false;
   const mapping = OLD_KEY_MAP[permission];
   if (!mapping) return false;
-  return matrix[mapping[0]][mapping[1]];
+  return matrix[mapping[0]]?.[mapping[1]] ?? false;
 }
 
 // Check module+action directly
-export function canDo(matrix: PermissionMatrix, module: ModuleKey, action: Action): boolean {
-  return matrix[module]?.[action] ?? false;
+export function canDo(matrix: PermissionMatrix | null | undefined, module: ModuleKey, action: Action): boolean {
+  return matrix?.[module]?.[action] ?? false;
 }
 
 // ROLE-BASED FALLBACK (for users with no groups during transition)

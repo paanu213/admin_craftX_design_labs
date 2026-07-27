@@ -173,7 +173,11 @@ export function ProductsContent() {
 
   const { data: products = [], isLoading } = useQuery<Product[]>({
     queryKey: ["products"],
-    queryFn: () => fetch("/api/products").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/products");
+      if (!r.ok) throw new Error(`Failed to fetch products: ${r.status}`);
+      return r.json() as Promise<Product[]>;
+    },
   });
 
   const createMutation = useMutation({
