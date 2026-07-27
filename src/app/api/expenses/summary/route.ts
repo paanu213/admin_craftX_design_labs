@@ -14,7 +14,7 @@ export async function GET() {
     const isAdmin = canDo(matrix, 'expenses', 'update');
     const ownFilter = isAdmin ? {} : { createdById: session.user.id };
 
-    const [allGrouped, approvedGrouped, pendingGrouped] = await Promise.all([
+    const [allGrouped, approvedGrouped, pendingGrouped] = (await Promise.all([
       db.expense.groupBy({
         by: ["createdById"],
         where: ownFilter,
@@ -32,7 +32,7 @@ export async function GET() {
         where: { status: "PENDING", ...ownFilter },
         _count: { id: true },
       }),
-    ]) as [
+    ])) as unknown as [
       Array<{ createdById: string; _sum: { amount: unknown }; _count: { id: number } }>,
       Array<{ createdById: string; _sum: { amount: unknown } }>,
       Array<{ createdById: string; _count: { id: number } }>,
