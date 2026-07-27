@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
       by: ["applicationId"],
       where: { applicationId: { not: null } },
       _count: { id: true },
-    }) as Array<{ applicationId: string | null; _count: { id: number } }>;
+    }) as unknown as Array<{ applicationId: string | null; _count: { id: number } }>;
     const activeMap = Object.fromEntries(
       activeCountsRaw
         .filter((r) => r.applicationId)
