@@ -137,7 +137,7 @@ export async function POST(request: NextRequest) {
       }),
     ]);
 
-    // Record payment if provided (CEO/SUPER_ADMIN auto-approve own payment)
+    // Record payment if provided (CEO auto-approve own payment)
     if (payment && keyType === "SUBSCRIPTION") {
       await db.payment.create({
         data: {

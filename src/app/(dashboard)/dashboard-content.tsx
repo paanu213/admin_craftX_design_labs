@@ -102,13 +102,13 @@ function DashboardSkeleton() {
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
   CEO: "CEO",
   CMO: "CMO",
   CFO: "CFO",
   CTO: "CTO",
   COO: "COO",
   EMPLOYEE: "Employee",
+  CUSTOMER_CARE: "Customer Care",
 };
 
 export function DashboardContent({ userName }: { userName: string }) {

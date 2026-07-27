@@ -19,7 +19,7 @@ async function main() {
         name: "Admin User",
         email: "admin@craftxlabs.com",
         password: await bcrypt.hash("Admin@123", salt),
-        role: "SUPER_ADMIN",
+        role: "CEO",
       },
     }),
     db.user.upsert({

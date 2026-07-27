@@ -96,7 +96,6 @@ export function canDo(matrix: PermissionMatrix | null | undefined, module: Modul
 
 // ROLE-BASED FALLBACK (for users with no groups during transition)
 const ROLE_FALLBACK_PERMISSIONS: Record<string, PermissionMatrix> = {
-  SUPER_ADMIN: FULL_PERMISSIONS,
   CEO: computeEffectivePermissions([{
     clients:        { read: true, create: true, update: true, delete: true },
     payments:       { read: true, create: true, update: true, delete: false },

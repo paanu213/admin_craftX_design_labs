@@ -38,13 +38,13 @@ export function slugify(text: string): string {
 }
 
 export const ROLE_LABELS: Record<string, string> = {
-  SUPER_ADMIN: "Super Admin",
   CEO: "CEO",
   CMO: "CMO",
   CFO: "CFO",
   CTO: "CTO",
   COO: "COO",
   EMPLOYEE: "Employee",
+  CUSTOMER_CARE: "Customer Care",
 };
 
 export const CLIENT_STATUS_LABELS: Record<string, string> = {

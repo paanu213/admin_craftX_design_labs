@@ -12,13 +12,13 @@ datasource db {
 // ─────────────────────────────────────────────
 
 enum UserRole {
-  SUPER_ADMIN
   CEO
   CMO
   CFO
   CTO
   COO
   EMPLOYEE
+  CUSTOMER_CARE
 }
 
 enum ClientStatus {
