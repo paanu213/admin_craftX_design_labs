@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
-import { travelanFetch } from "@/lib/travelan";
+import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Card, CardContent } from "@/components/ui/card";
@@ -25,10 +25,6 @@ interface Agency {
   agencyCode?: string;
 }
 
-interface AgenciesResponse {
-  data: Agency[];
-  meta?: { total: number; page: number; totalPages: number };
-}
 
 const PLAN_COLORS: Record<string, "default" | "secondary" | "outline"> = {
   FREE: "outline",
@@ -41,7 +37,7 @@ export default function TravelanAgenciesPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = useQuery<AgenciesResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["travelan", "agencies", page, search],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "12" });
@@ -51,9 +47,8 @@ export default function TravelanAgenciesPage() {
     retry: 1,
   });
 
-  const agencies = data?.data ?? [];
-  const total = data?.meta?.total ?? 0;
-  const totalPages = data?.meta?.totalPages ?? 1;
+  const agencies = extractList<Agency>(data);
+  const { total, totalPages } = extractPagination(data);
 
   return (
     <>

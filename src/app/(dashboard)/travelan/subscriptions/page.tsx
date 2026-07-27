@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { travelanFetch } from "@/lib/travelan";
+import { travelanFetch, extractList, extractPagination } from "@/lib/travelan";
 import { Header } from "@/components/layout/Header";
 import { PageWrapper, PageHeader } from "@/components/layout/PageWrapper";
 import { Badge } from "@/components/ui/badge";
@@ -32,16 +32,12 @@ interface Subscription {
   isAutoRenew?: boolean;
 }
 
-interface SubsResponse {
-  data: Subscription[];
-  meta?: { total: number; page: number; totalPages: number };
-}
 
 export default function TravelanSubscriptionsPage() {
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
 
-  const { data, isLoading, error } = useQuery<SubsResponse>({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["travelan", "subscriptions", page, search],
     queryFn: () => {
       const params = new URLSearchParams({ page: String(page), limit: "15" });
@@ -51,9 +47,8 @@ export default function TravelanSubscriptionsPage() {
     retry: 1,
   });
 
-  const subscriptions = data?.data ?? [];
-  const totalPages = data?.meta?.totalPages ?? 1;
-  const total = data?.meta?.total ?? 0;
+  const subscriptions = extractList<Subscription>(data);
+  const { total, totalPages } = extractPagination(data);
 
   return (
     <>
