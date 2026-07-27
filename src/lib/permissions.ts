@@ -9,6 +9,7 @@ export const MODULES = [
   { key: 'masterData',     label: 'Master Data' },
   { key: 'users',          label: 'Users & Groups' },
   { key: 'settings',       label: 'Settings' },
+  { key: 'products',       label: 'Products' },
 ] as const;
 
 export type ModuleKey = (typeof MODULES)[number]['key'];
@@ -56,6 +57,8 @@ const OLD_KEY_MAP: Record<string, [ModuleKey, Action]> = {
   manageUsers:         ['users',          'create'],
   viewSettings:        ['settings',       'read'],
   manageSettings:      ['settings',       'update'],
+  viewProducts:        ['products',       'read'],
+  manageProducts:      ['products',       'create'],
 };
 
 export type Permission = keyof typeof OLD_KEY_MAP;
@@ -104,6 +107,7 @@ const ROLE_FALLBACK_PERMISSIONS: Record<string, PermissionMatrix> = {
     masterData:     { read: true, create: true, update: true, delete: true },
     users:          { read: true, create: false, update: false, delete: false },
     settings:       { read: true, create: false, update: true, delete: false },
+    products:       { read: true, create: true, update: true, delete: true },
   }]),
   CMO: computeEffectivePermissions([{
     clients:        { read: true, create: true, update: true, delete: false },
@@ -116,6 +120,7 @@ const ROLE_FALLBACK_PERMISSIONS: Record<string, PermissionMatrix> = {
     masterData:     { read: true, create: false, update: false, delete: false },
     users:          { read: false, create: false, update: false, delete: false },
     settings:       { read: true, create: false, update: false, delete: false },
+    products:       { read: true, create: false, update: false, delete: false },
   }]),
 };
 // Default fallback for other roles

@@ -16,6 +16,7 @@ import { getInitials, ROLE_LABELS } from "@/lib/utils";
 import { useUIStore } from "@/store/ui.store";
 import type { UserRole } from "@/types";
 import { ChangePasswordDialog } from "@/components/layout/ChangePasswordDialog";
+import { ProductSwitcher } from "@/components/layout/ProductSwitcher";
 
 interface HeaderProps {
   title?: string;
@@ -27,7 +28,7 @@ export function Header({ title }: HeaderProps) {
 
   return (
     <header className="flex h-16 items-center justify-between border-b border-border bg-card px-6">
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
@@ -42,6 +43,8 @@ export function Header({ title }: HeaderProps) {
       </div>
 
       <div className="flex items-center gap-2">
+        <ProductSwitcher />
+
         <Button variant="ghost" size="icon" className="relative text-muted-foreground">
           <Bell className="h-4 w-4" />
         </Button>
