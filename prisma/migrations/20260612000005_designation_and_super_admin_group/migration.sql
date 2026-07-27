@@ -1,5 +1,7 @@
--- Add EMPLOYEE to UserRole enum
-ALTER TYPE "UserRole" ADD VALUE 'EMPLOYEE';
+-- Add EMPLOYEE to UserRole enum (idempotent)
+DO $$ BEGIN
+    ALTER TYPE "UserRole" ADD VALUE 'EMPLOYEE';
+EXCEPTION WHEN duplicate_object THEN null; END $$;
 
 -- Change default designation to EMPLOYEE for new users
 ALTER TABLE "users" ALTER COLUMN "role" SET DEFAULT 'EMPLOYEE';

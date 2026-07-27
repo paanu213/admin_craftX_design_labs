@@ -113,13 +113,14 @@ export async function GET() {
     ]);
 
     const spenderIds = topSpendersGroupBy.map((s: { createdById: string }) => s.createdById);
-    const spenderUsers: Array<{ id: string; name: string; role: string }> =
+    const spenderUsers = (
       spenderIds.length > 0
         ? await db.user.findMany({
             where: { id: { in: spenderIds } },
             select: { id: true, name: true, role: true },
           })
-        : [];
+        : []
+    ) as Array<{ id: string; name: string; role: string }>;
 
     const topSpenders = topSpendersGroupBy.map((s: { createdById: string; _sum: { amount?: unknown }; _count: { id: number } }) => {
       const user = spenderUsers.find((u) => u.id === s.createdById);
