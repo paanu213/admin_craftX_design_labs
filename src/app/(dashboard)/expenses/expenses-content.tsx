@@ -80,12 +80,17 @@ export function ExpensesContent({ canApprove }: { canApprove: boolean }) {
 
   const { data: summary } = useQuery<SpendingSummaryItem[]>({
     queryKey: ["expenses-summary"],
-    queryFn: () => fetch("/api/expenses/summary").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/expenses/summary");
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load summary");
+      return json;
+    },
   });
 
   const { data, isLoading, refetch } = useQuery<ExpensesResponse>({
     queryKey: ["expenses", page, search, statusFilter, categoryFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(PAGE_LIMIT),
@@ -93,7 +98,10 @@ export function ExpensesContent({ canApprove }: { canApprove: boolean }) {
         ...(statusFilter !== "ALL" && { status: statusFilter }),
         ...(categoryFilter !== "ALL" && { category: categoryFilter }),
       });
-      return fetch(`/api/expenses?${params}`).then((r) => r.json());
+      const r = await fetch(`/api/expenses?${params}`);
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load expenses");
+      return json;
     },
   });
 

@@ -67,7 +67,12 @@ export function ClientPaymentsContent({
 
   const { data: payments, isLoading } = useQuery<Payment[]>({
     queryKey: ["client-payments", clientId],
-    queryFn: () => fetch(`/api/payments?clientId=${clientId}`).then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch(`/api/payments?clientId=${clientId}`);
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load payments");
+      return json;
+    },
     enabled: !!clientId,
   });
 

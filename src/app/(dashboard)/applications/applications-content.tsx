@@ -61,7 +61,7 @@ export function ApplicationsContent() {
 
   const { data, isLoading, refetch } = useQuery<ApplicationsResponse>({
     queryKey: ["applications", page, search, categoryFilter, statusFilter],
-    queryFn: () => {
+    queryFn: async () => {
       const params = new URLSearchParams({
         page: String(page),
         limit: String(PAGE_LIMIT),
@@ -69,7 +69,10 @@ export function ApplicationsContent() {
         ...(categoryFilter !== "ALL" && { category: categoryFilter }),
         ...(statusFilter !== "ALL" && { status: statusFilter }),
       });
-      return fetch(`/api/applications?${params}`).then((r) => r.json());
+      const r = await fetch(`/api/applications?${params}`);
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load applications");
+      return json;
     },
   });
 
