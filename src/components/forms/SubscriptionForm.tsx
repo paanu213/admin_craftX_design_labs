@@ -52,7 +52,12 @@ export function SubscriptionForm({
 
   const { data: appsData } = useQuery<{ data: Application[] }>({
     queryKey: ["applications-list"],
-    queryFn: () => fetch("/api/applications?status=ACTIVE").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/applications?status=ACTIVE");
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load applications");
+      return json;
+    },
   });
   const apps = appsData?.data ?? [];
 

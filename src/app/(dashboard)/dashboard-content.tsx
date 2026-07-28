@@ -115,7 +115,12 @@ export function DashboardContent({ userName }: { userName: string }) {
   const router = useRouter();
   const { data, isLoading } = useQuery<DashboardData>({
     queryKey: ["dashboard"],
-    queryFn: () => fetch("/api/dashboard").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/dashboard");
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load dashboard");
+      return json;
+    },
   });
 
   if (isLoading) return <DashboardSkeleton />;

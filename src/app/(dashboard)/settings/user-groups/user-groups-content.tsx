@@ -57,7 +57,12 @@ export function UserGroupsContent() {
 
   const { data: groups, isLoading } = useQuery<UserGroup[]>({
     queryKey: ["user-groups"],
-    queryFn: () => fetch("/api/user-groups").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/user-groups");
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load groups");
+      return json;
+    },
   });
 
   function openCreate() {

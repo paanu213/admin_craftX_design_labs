@@ -66,7 +66,12 @@ export function DevAccessContent({ canGenerate }: DevAccessContentProps) {
 
   const { data: settings, refetch: refetchSettings } = useQuery<Record<string, string>>({
     queryKey: ["settings"],
-    queryFn: () => fetch("/api/settings").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/settings");
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load settings");
+      return json;
+    },
     enabled: isFounder,
   });
 

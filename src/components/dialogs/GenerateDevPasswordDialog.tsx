@@ -64,8 +64,12 @@ export function GenerateDevPasswordDialog({
 
   const { data: clientsData } = useQuery<{ data: ClientOption[] }>({
     queryKey: ["clients-list-minimal"],
-    queryFn: () =>
-      fetch("/api/clients?limit=200&status=ACTIVE").then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch("/api/clients?limit=200&status=ACTIVE");
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load clients");
+      return json;
+    },
     enabled: open && !prefillClientId,
   });
 

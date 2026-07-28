@@ -75,7 +75,12 @@ export function ClientsContent() {
 
   const { data: stats, isLoading: statsLoading } = useQuery<StatsResponse>({
     queryKey: ["clients-stats", period],
-    queryFn: () => fetch(`/api/clients/stats?period=${period}`).then((r) => r.json()),
+    queryFn: async () => {
+      const r = await fetch(`/api/clients/stats?period=${period}`);
+      const json = await r.json();
+      if (!r.ok) throw new Error(json.error ?? "Failed to load stats");
+      return json;
+    },
   });
 
   const { data, isLoading, isError, error, refetch } = useQuery<ClientsResponse>({
@@ -121,7 +126,7 @@ export function ClientsContent() {
   }
 
   const statValue = (status: string) =>
-    status === "total" ? (stats?.total ?? 0) : (stats?.byStatus[status] ?? 0);
+    status === "total" ? (stats?.total ?? 0) : ((stats?.byStatus ?? {})[status] ?? 0);
 
   return (
     <div className="space-y-4">
